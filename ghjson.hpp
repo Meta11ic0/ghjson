@@ -7,23 +7,30 @@
 
 namespace ghjson
 {
+enum class JsonType
+{
+    NUL, NUMBER, BOOL, STRING, ARRAY, OBJECT
+};
 
 class JsonValue
 {
-    virtual const Json::JsonType GetTyoe() const;
-    virtual const Json GetValue() const;
+    public:
+        virtual const JsonType GetType() const = 0;
+        template<typename>
+        
+        virtual ~JsonValue(){};
 };
+
+using array = std::vector<JsonValue>;
+using object = std::map<std::string,JsonValue>;
 
 class Json
 {
     public:
-
-        enum class JsonType
-        {
-            NUL, NUMBER, BOOL, STRING, ARRAY, OBJECT
-        };
         Json Parse(const std::string & str);
         std::string Dump();
+        const JsonType Type();
+        const JsonValue Value();
     private:
         std::shared_ptr<JsonValue> m_ptr;
 };
