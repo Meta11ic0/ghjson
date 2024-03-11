@@ -7,19 +7,14 @@
 
 namespace ghjson
 {
-    using std::string;
-    using std::vector;
-    using std::map;
-    using std::shared_ptr;
-    using std::make_shared;
-
+    class JsonValue;
+    class Json;
+    using array = std::vector<Json>;
+    using object = std::map<std::string,Json>;
     enum class JsonType
     {
         NUL, NUMBER, BOOL, STRING, ARRAY, OBJECT
     };
-
-    using array = vector<JsonValue>;
-    using object = map<string,JsonValue>;
 
     class JsonValue
     {
@@ -28,40 +23,21 @@ namespace ghjson
             //要提供比较函数
             virtual bool equals(const JsonValue * other) const = 0;
             virtual bool less(const JsonValue * other) const = 0;
-            virtual const string dump() const = 0;
-            virtual const double number_value() const;
-            virtual const int int_value() const; 
-            virtual const bool bool_value() const;
-            virtual const string &string_value() const;
+            virtual const std::string dump() const = 0;
+            virtual double number_value() const;
+            virtual int int_value() const; 
+            virtual bool bool_value() const;
+            virtual const std::string &string_value() const;
             virtual const array &array_items() const;
             virtual const Json &operator[](size_t i) const;
             virtual const object &object_items() const;
-            virtual const Json &operator[](const string &key) const;
+            virtual const Json &operator[](const std::string &key) const;
             virtual ~JsonValue(){};   
     };
-
-
 
     class Json
     {
         public:
-
-            /*noexcept关键字在C++中用来指定一个函数不会抛出异常。
-            当用在构造函数上时，它表明构造函数调用过程中不会抛出任何异常，
-            这样的构造函数通常具有更高的性能，因为编译器可以做出额外优化，例如更有效地使用移动语义而不是复制。
-            在Json类中，NUL类型的构造函数被标记为noexcept，
-            因为它们实际上执行的操作非常简单：它们只是初始化内部的指针成员为null，没有进行任何可能抛出异常的操作
-            如NUMBER、BOOL、STRING、ARRAY和OBJECT, 
-            例如字符串的构造可能涉及到内存的分配，
-            而这个操作是有可能失败并抛出异常的，
-            所以它们的构造函数不应标记为noexcept。
-            相似地，向vector添加元素（在ARRAY类型中）
-            和向map添加键值对（在OBJECT类型中）都可能引起内存分配错误，
-            并携带异常抛出的风险。
-            因此，只有那些保证在任何情况下都不会触发异常抛出的构造函数才应该被声明为noexcept。
-            这是为了清晰地表明它们的异常安全保证，
-            以及允许编译器进行优化
-            */
             // Constructors for the various types of JSON value.
             Json() noexcept;                // NUL
             Json(std::nullptr_t) noexcept;  // NUL
@@ -75,20 +51,17 @@ namespace ghjson
             Json(array &&values);           // ARRAY
             Json(const object &values);     // OBJECT
             Json(object &&values);          // OBJECT
-
-            Json Parse(const string & str);
-            string dump() const;
-            const JsonType type() const;
+            
             // Return the enclosed value if this is a number, 0 otherwise. Note that json11 does not
             // distinguish between integer and non-integer numbers - number_value() and int_value()
             // can both be applied to a NUMBER-typed object.
-            const double number_value() const;
-            const int int_value() const;
+            double number_value() const;
+            int int_value() const;
             //int int_value() const;
             // Return the enclosed value if this is a boolean, false otherwise.
-            const bool bool_value() const;
+            bool bool_value() const;
             // Return the enclosed string if this is a string, "" otherwise.
-            const string &string_value() const;
+            const std::string &string_value() const;
             // Return the enclosed vector if this is an array, or an empty vector otherwise.
             const array &array_items() const;
             // Return the enclosed map if this is an object, or an empty map otherwise.
@@ -97,8 +70,47 @@ namespace ghjson
             // Return a reference to arr[i] if this is an array, Json() otherwise.
             const Json & operator[](size_t i) const;
             // Return a reference to obj[key] if this is an object, Json() otherwise.
-            const Json & operator[](const string &key) const;
+            const Json & operator[](const std::string &key) const;
+            // Accessors
+            JsonType type() const;
 
+            bool is_null()   const { return type() == JsonType::NUL; }
+            bool is_number() const { return type() == JsonType::NUMBER; }
+            bool is_bool()   const { return type() == JsonType::BOOL; }
+            bool is_string() const { return type() == JsonType::STRING; }
+            bool is_array()  const { return type() == JsonType::ARRAY; }
+            bool is_object() const { return type() == JsonType::OBJECT; }
+
+            // Serialize.
+            void dump(std::string &out) const;
+            std::string dump() const 
+            {
+                std::string out;
+                dump(out);
+                return out;
+            }
+            // Parse. If parse fails, return Json() and assign an error message to err.
+            static Json parse(const std::string & in, std::string & err);
+            static Json parse(const char * in, std::string & err)
+            {
+                if (in) 
+                {
+                    return parse(std::string(in), err);
+                } 
+                else 
+                {
+                    err = "null input";
+                    return nullptr;
+                }
+            }
+
+            
+            bool operator== (const Json &rhs) const;
+            bool operator<  (const Json &rhs) const;
+            bool operator!= (const Json &rhs) const { return !(*this == rhs); }
+            bool operator<= (const Json &rhs) const { return !(rhs < *this); }
+            bool operator>  (const Json &rhs) const { return  (rhs < *this); }
+            bool operator>= (const Json &rhs) const { return !(*this < rhs); }
         private:
             std::shared_ptr<JsonValue> m_ptr;
     };
