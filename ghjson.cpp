@@ -163,7 +163,8 @@ namespace ghjson
     const Json &   Json::operator[] (const string &key)   const { return (*m_ptr)[key];         }
 
     /* Comparison */
-    bool Json::operator== (const Json &other) const {
+    bool Json::operator== (const Json &other) const 
+    {
         if (m_ptr == other.m_ptr)
             return true;
         if (m_ptr->type() != other.m_ptr->type())
@@ -172,7 +173,8 @@ namespace ghjson
         return m_ptr->equals(other.m_ptr.get());
     }
 
-    bool Json::operator< (const Json &other) const {
+    bool Json::operator< (const Json &other) const 
+    {
         if (m_ptr == other.m_ptr)
             return false;
         if (m_ptr->type() != other.m_ptr->type())
