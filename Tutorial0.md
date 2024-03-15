@@ -76,5 +76,5 @@ JSON的基本数据类型：
 
 我们的 JSON 库名为 ghjson，greenhand有新手的意思。JSON格式的字符串我们用RAW JSON STRING 表示，程序中的数据结构我们用json来表示，解析功能我们使用parse()接口提供，序列化功能我们使用dump()接口提供。这些名称我都是随自己习惯命名，没有明确要求。
 
-![DFD](pics\DataFlowDiagram.png)
+![DFD](pics/DataFlowDiagram.png)
 
