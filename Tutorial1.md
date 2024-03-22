@@ -7,33 +7,35 @@
 我对Json类的大致规划是如下面代码所示，使用C++11新添加的特性shared_ptr保证内存的安全
 
 ~~~cpp
-class Json
-{
-    public:
-        double GetDouble() const;
-        int GetInt() const;
-        //int int_value() const;
-        // Return the enclosed value if this is a boolean, false otherwise.
-        bool GetBool() const;
-        // Return the enclosed string if this is a string, "" otherwise.
-        const std::string &GetString() const;
-        // Return the enclosed vector if this is an array, or an empty vector otherwise.
-        const array &GetArray() const;
-        // Return the enclosed map if this is an object, or an empty map otherwise.
-        const object &GetObject() const;
-        // Return a reference to arr[i] if this is an array, Json() otherwise.
-        const Json & operator[](size_t i) const;
-        // Return a reference to obj[key] if this is an object, Json() otherwise.
-        const Json & operator[](const std::string &key) const;
-        // Accessors
-        JsonType Type() const;
-        // Serialize.
-        std::string Dump() const;
-        // Parse. 
-        static Json Parse(const std::string & in, std::string & err);
-    private:
-        std::shared_ptr<JsonValue> m_ptr;
-}
+    using array = std::vector<Json>;
+    using object = std::map<std::string, Json>;
+
+    class Json
+    {
+        public:
+            double GetDouble() const;
+            int GetInt() const;
+            // Return the enclosed value if this is a boolean, false otherwise.
+            bool GetBool() const;
+            // Return the enclosed string if this is a string, "" otherwise.
+            const std::string &GetString() const;
+            // Return the enclosed vector if this is an array, or an empty vector otherwise.
+            const array &GetArray() const;
+            // Return the enclosed map if this is an object, or an empty map otherwise.
+            const object &GetObject() const;
+            // Return a reference to arr[i] if this is an array, Json() otherwise.
+            const Json & operator[](size_t i) const;
+            // Return a reference to obj[key] if this is an object, Json() otherwise.
+            const Json & operator[](const std::string &key) const;
+
+            JsonType Type() const;
+            // Serialize.
+            std::string Dump() const;
+            // Parse. 
+            static Json Parse(const std::string & in, std::string & err);
+        private:
+            std::shared_ptr<JsonValue> m_ptr;
+    };
 
 ~~~
 
@@ -108,65 +110,81 @@ int main() {
 
 JsonValue 包含了多种不同类型的 JSON 值，如数值、字符串、布尔值、数组和对象等。使用基类和派生类的方式可以使代码结构更加清晰和灵活。基类可以定义通用的接口和操作，而派生类则可以根据具体类型来实现特定的功能。
 
-基类中为不同类型的值提供特定的方法来访问这些值。这种方式的目的是确保类型安全，以及明确表达一个值的预期类型。然后对于ARRAY和OBJECT类型的json对象，我们还要提供“[]”操作符来取值。同时我们要提供纯虚函数dump()和type()，确保每一个派生类有自己的实现方式。
+基类中为不同类型的值提供特定的方法来访问这些值。这种方式的目的是确保类型安全，以及明确表达一个值的预期类型。然后对于ARRAY和OBJECT类型的json对象，我们还要提供“[]”操作符来取值。同时我们要提供纯虚函数dump()和type()，确保每一个派生类有合适的实现方式。
 
 ~~~cpp
+    class JsonValue
+    {
+        public:
+            virtual const std::string Dump() const = 0;
+            virtual const JsonType Type() const = 0;
 
-using array = std::vector<Json>;
-using object = std::map<std::string, Json>;
-class JsonValue
-{
-    //...
-    public:
-        virtual const std::string Dump() const = 0;
-        virtual const JsonType Type() const = 0;
+            virtual double GetDouble() const;
+            virtual int GetInt() const;
+            virtual bool GetBool() const;
+            virtual const std::string& GetString() const;
+            virtual const array& GetArray() const;
+            virtual const Json& operator[](size_t i) const;
+            virtual const object& GetObject() const;
+            virtual const Json& operator[](const std::string& key) const;
 
-        virtual double GetDouble() const;
-        virtual int GetInt() const; 
-        virtual bool GetBool() const;
-        virtual const std::string &GetString() const;
-        virtual const array &GetArray() const;
-        virtual const Json &operator[](size_t i) const;
-        virtual const object &GetObject() const;
-        virtual const Json &operator[](const std::string &key) const;
-
-        virtual ~JsonValue();
-    //...
-}
+            virtual ~JsonValue();
+    };
 ~~~
 
-因为暴露出去的接口不想太复杂，所以我们在代码实现中这样操作，Value类作为目标生类和基类直接的中间层，实现一些公用的部分
+我们在代码实现中这样操作，Value类作为目标类和基类直接的中间层，实现一些可以通用的部分，比如实际存储值的初始化构造和类型返回。
 
 ~~~cpp
-    
-
     template<JsonType tag, typename T>
     class Value : public JsonValue
     {
         protected:
-               Value(const T &value) : m_value(value) {};
-            explicit Value(T &&value)      : m_value(move(value)) {};
+            explicit Value(const T& value) : m_value(value) {};
+            explicit Value(T&& value) : m_value(move(value)) {};
             // Get type tag
-            const JsonType type() const override 
-            {
-                return tag;
-            }
+            const JsonType type() const override { return tag; }
             const T m_value;
     };
 ~~~
 
-然后是各个类的实现
+### NUL
+
+Json空值的实际值我们可以使用nullptr来承载，但是考虑到我们无法定义nullptr的比较实现，并且当比较发生的时候会报错。
 
 ~~~cpp
-    
+    if(nullptr1 < nullptr2) //出错
+        //..
+~~~
+
+所以我们自己可以自定义一个空类，里面不用存放任何变量，暂时只需要满足我们后续可能用到的比较需求。然后就可以实现JsonNull
+
+~~~cpp
+    class NullClass
+    {
+    public:
+        bool operator == (NullClass) { return true; }
+        bool operator < (NullClass) { return false; }
+    };
+
+    class JsonNull final : public Value<JsonType::NUL, NullClass>
+    {
+    public:
+        JsonNull() : Value({}) {};
+    };
+~~~
+
+### 其他
+
+将Double和Int分开实现是为了精度，但这并不是必须的。然后除了array和object要实现"[]"运算符重载以外，其它的也只是依葫芦画瓢。
+
+~~~cpp
     class JsonDouble final : public Value<JsonType::NUMBER, double> 
     {
         public:
             explicit JsonDouble(double value) : Value(value) {}
         private:
-            double GetDouble() const override { return m_value; }
-            int GetInt() const override { return static_cast<int>(m_value); }
-
+            double number_value() const override { return m_value; }
+            int int_value() const override { return static_cast<int>(m_value); }
     };
 
     class JsonInt final : public Value<JsonType::NUMBER, int> 
@@ -174,45 +192,64 @@ class JsonValue
         public:
             explicit JsonInt(int value) : Value(value) {}
         private:
+            double number_value() const override { return m_value; }
+            int int_value() const override { return m_value; } 
+    }
+
+    class JsonDouble final : public Value<JsonType::NUMBER, double>
+    {
+        public:
+            explicit JsonDouble(double value) : Value(value) {}
+        private:
             double GetDouble() const override { return m_value; }
-            int GetInt() const override { return m_value; }
+            int GetInt() const override { return static_cast<int>(m_value); }
+    };
+
+    class JsonInt final : public Value<JsonType::NUMBER, int>
+    {
+    public:
+        explicit JsonInt(int value) : Value(value) {}
+    private:
+        double GetDouble() const override { return m_value; }
+        int GetInt() const override { return m_value; }
     };
 
     class JsonBoolean final : public Value<JsonType::BOOL, bool>
     {
-        public:
-            explicit JsonBoolean(bool value) : Value(value){}
-        private:
-            bool GetBool() const override {return m_value;}
+    public:
+        explicit JsonBoolean(bool value) : Value(value) {}
+    private:
+        bool GetBool() const override { return m_value; }
     };
 
     class JsonString final : public Value<JsonType::STRING, std::string>
     {
-        public:
-            explicit JsonString(const std::string &value) : Value(value) {}
-            explicit JsonString(std::string &&value) : Value(move(value)) {}
-        private:
-            const std::string &GetString() const override { return m_value;}
+    public:
+        explicit JsonString(const std::string& value) : Value(value) {}
+        explicit JsonString(std::string&& value) : Value(move(value)) {}
+    private:
+        const std::string& GetString() const override { return m_value; }
 
     };
 
     class JsonArray final : public Value<JsonType::ARRAY, array>
     {
-        public:
-            explicit JsonArray(const array &value) : Value(value) {};
-            explicit JsonArray(array &&value) : Value(move(value)) {};
-        private:
-            const array & GetArray() const override { return m_value; }
-            const Json & operator[](size_t i) const override;
+    public:
+        explicit JsonArray(const array& value) : Value(value) {};
+        explicit JsonArray(array&& value) : Value(move(value)) {};
+    private:
+        const array& GetArray() const override { return m_value; }
+        const Json& operator[](size_t i) const override { return (*m_ptr)[i]; };
     };
 
     class JsonObject final : public Value<JsonType::OBJECT, object>
     {
-        public:
-            explicit JsonObject(const object &value) : Value(value) {};
-            explicit JsonObject(object &&value) : Value(move(value)) {};
-        private:
-            const object & GetObject() const override { return m_value; }
-            const Json & operator[](const std::string & key) const override;
+    public:
+        explicit JsonObject(const object& value) : Value(value) {};
+        explicit JsonObject(object&& value) : Value(move(value)) {};
+    private:
+        const object& GetObject() const override { return m_value; }
+        const Json& operator[](const std::string& key) const override { return (*m_ptr)[key] };
     };
+
 ~~~
