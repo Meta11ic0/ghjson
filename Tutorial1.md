@@ -72,7 +72,7 @@ int main() {
 
 ## Json
 
-我对Json类的大致规划是如下面代码所示，使用C++11新添加的特性shared_ptr保证内存的安全
+Json类的设计中，我用std::string表示Json中的String，std::vector表示Json中的Array，std::map表示Json中的Object。在Json类中提供所有类型的取值接口，还需要为Array和Object提供对应的operator[]，意味着当你向一个Json类型为String的对象使用GetNumber()也是可行的，但是我们对类型没有正确匹配的取值操作返回默认值，这样能保证代码的容错性和灵活性，同时也免去了类型检查的工作。然后我们还需要实现operator<、operator=等运算符重载用于实现比较。最后就是一开始提到的dump()和parse()。代码暂时设计如下：
 
 ~~~cpp
     using array = std::vector<Json>;
@@ -81,59 +81,45 @@ int main() {
     class Json
     {
         public:
-            // Return the enclosed value if this is a number, 0 otherwise.
-            double GetDouble() const;
-            int GetInt() const;
-            // Return the enclosed value if this is a boolean, false otherwise.
+            //..
+            //GetValue
+            double GetNumber() const;
             bool GetBool() const;
-            // Return the enclosed string if this is a string, "" otherwise.
             const std::string &GetString() const;
-            // Return the enclosed vector if this is an array, or an empty vector otherwise.
             const array &GetArray() const;
-            // Return the enclosed map if this is an object, or an empty map otherwise.
             const object &GetObject() const;
-            // Return a reference to arr[i] if this is an array, Json() otherwise.
             const Json & operator[](size_t i) const;
-            // Return a reference to obj[key] if this is an object, Json() otherwise.
             const Json & operator[](const std::string &key) const;
 
-            // Accessors
-            JsonType Type() const;
-            bool is_null()   const { return Type() == JsonType::NUL; }
-            bool is_number() const { return Type() == JsonType::NUMBER; }
-            bool is_bool()   const { return Type() == JsonType::BOOL; }
-            bool is_string() const { return Type() == JsonType::STRING; }
-            bool is_array()  const { return Type() == JsonType::ARRAY; }
-            bool is_object() const { return Type() == JsonType::OBJECT; }
-
+            //Comparisons
+            bool operator== (const Json &rhs) const;
+            bool operator<  (const Json &rhs) const;
             // Serialize.
             std::string Dump() const;
+
             // Parse. 
             static Json Parse(const std::string & in, std::string & err);
+
         private:
             std::shared_ptr<JsonValue> m_ptr;
+            //..
     };
-
 ~~~
 
 
 ## JsonValue
 
-JsonValue 包含了多种不同类型的 JSON 值，如数值、字符串、布尔值、数组和对象等。使用基类和派生类的方式可以使代码结构更加清晰和灵活。基类可以定义通用的接口和操作，而派生类则可以根据具体类型来实现特定的功能。
-
-基类中为不同类型的值提供特定的方法来访问这些值。这种方式的目的是确保类型安全，以及明确表达一个值的预期类型。然后对于ARRAY和OBJECT类型的json对象，我们还要提供“[]”操作符来取值。同时我们要提供纯虚函数dump()和type()，确保每一个特化的派生类有合适的实现方式。
+因为有多种不同类型的 JSON 值，我采用基类和派生类的方式来实现这个数据结构。基类可以定义通用的接口和操作，而派生类则可以根据具体类型来实现特定的功能。
 
 ~~~cpp
     template<JsonType tag, typename T>
     class JsonValue
     {
-        public:
-            explicit JsonValue(const T& value) : m_value(value) {};
-            explicit JsonValue(T&& value) : m_value(move(value)) {};
-            
+        //..
+        public:         
             const JsonType type() const { return tag; }
-            virtual double GetDouble() const;
-            virtual int GetInt() const;
+
+            virtual double GetNumber() const;
             virtual bool GetBool() const;
             virtual const std::string& GetString() const;
             virtual const array& GetArray() const;
@@ -141,113 +127,12 @@ JsonValue 包含了多种不同类型的 JSON 值，如数值、字符串、布�
             virtual const object& GetObject() const;
             virtual const Json& operator[](const std::string& key) const;
 
-            virtual const std::string Dump() const = 0; //必须每个类型特化一个版本
+            virtual const std::string Dump() const = 0; 
+
             virtual ~JsonValue();
         private:
             const T m_value;
-            
-    };
-~~~
-
-然后是每个派生类的实现，将Double和Int分开实现是为了精度，但这并不是必须的。然后除了array和object要实现"[]"运算符重载以外，其它的也只是依葫芦画瓢。
-
-~~~cpp
-    class JsonDouble final : public JsonValue<JsonType::NUMBER, double> 
-    {
-        public:
-            explicit JsonDouble(double value) : JsonValue(value) {}
-        private:
-            double GetDouble() const override { return m_value; }
-            int int_value() const override { return static_cast<int>(m_value); }
-    };
-
-    class JsonInt final : public JsonValue<JsonType::NUMBER, int> 
-    {
-        public:
-            explicit JsonInt(int value) : JsonValue(value) {}
-        private:
-            double GetDouble() const override { return m_value; }
-            int int_value() const override { return m_value; } 
-    }
-
-    class JsonDouble final : public JsonValue<JsonType::NUMBER, double>
-    {
-        public:
-            explicit JsonDouble(double value) : JsonValue(value) {}
-        private:
-            double GetDouble() const override { return m_value; }
-            int GetInt() const override { return static_cast<int>(m_value); }
-    };
-
-    class JsonInt final : public JsonValue<JsonType::NUMBER, int>
-    {
-    public:
-        explicit JsonInt(int value) : JsonValue(value) {}
-    private:
-        double GetDouble() const override { return m_value; }
-        int GetInt() const override { return m_value; }
-    };
-
-    class JsonBoolen final : public JsonValue<JsonType::BOOL, bool>
-    {
-    public:
-        explicit JsonBoolen(bool value) : JsonValue(value) {}
-    private:
-        bool GetBool() const override { return m_value; }
-    };
-
-    class JsonString final : public JsonValue<JsonType::STRING, std::string>
-    {
-    public:
-        explicit JsonString(const std::string& value) : JsonValue(value) {}
-        explicit JsonString(std::string&& value) : JsonValue(move(value)) {}
-    private:
-        const std::string& GetString() const override { return m_value; }
-
-    };
-
-    class JsonArray final : public JsonValue<JsonType::ARRAY, array>
-    {
-    public:
-        explicit JsonArray(const array& value) : JsonValue(value) {};
-        explicit JsonArray(array&& value) : JsonValue(move(value)) {};
-    private:
-        const array& GetArray() const override { return m_value; }
-        const Json& operator[](size_t i) const override { return (*m_ptr)[i]; };
-    };
-
-    class JsonObject final : public JsonValue<JsonType::OBJECT, object>
-    {
-    public:
-        explicit JsonObject(const object& value) : JsonValue(value) {};
-        explicit JsonObject(object&& value) : JsonValue(move(value)) {};
-    private:
-        const object& GetObject() const override { return m_value; }
-        const Json& operator[](const std::string& key) const override { return (*m_ptr)[key] };
-    };
-
-~~~
-
-
-特殊的例子是空值，C++ 中的 nullptr_t 并不具有可比性，因此无法直接用于比较。
-~~~cpp
-    if(nullptr1 < nullptr2) //出错
         //..
-~~~
-
-所以我们自己可以自定义一个空类，可以通过重载运算符实现比较操作，更方便地进行空值的判断和处理。
-
-~~~cpp
-    class NullClass
-    {
-    public:
-        bool operator == (NullClass) { return true; }
-        bool operator < (NullClass) { return false; }
-    };
-
-    class JsonNull final : public JsonValue<JsonType::NUL, NullClass>
-    {
-    public:
-        JsonNull() : JsonValue({}) {};
     };
 ~~~
+
