@@ -2,43 +2,6 @@
 
 上一章开始我们了解了我们什么是json以及json库需要做什么。最重要的是我们知道了我们做哪几部分工作，现在我们从搭建Json数据结构开始。
 
-## Json
-
-我对Json类的大致规划是如下面代码所示，有一个类成员变量指针指向存储的值本身，使用C++11新添加的特性shared_ptr保证内存的安全；有一个类成员变量指向数据类型。
-
-~~~cpp
-    using array = std::vector<Json>;
-    using object = std::map<std::string, Json>;
-
-    class Json
-    {
-        public:
-            double GetDouble() const;
-            int GetInt() const;
-            // Return the enclosed value if this is a boolean, false otherwise.
-            bool GetBool() const;
-            // Return the enclosed string if this is a string, "" otherwise.
-            const std::string &GetString() const;
-            // Return the enclosed vector if this is an array, or an empty vector otherwise.
-            const array &GetArray() const;
-            // Return the enclosed map if this is an object, or an empty map otherwise.
-            const object &GetObject() const;
-            // Return a reference to arr[i] if this is an array, Json() otherwise.
-            const Json & operator[](size_t i) const;
-            // Return a reference to obj[key] if this is an object, Json() otherwise.
-            const Json & operator[](const std::string &key) const;
-
-            JsonType Type() const;
-            // Serialize.
-            std::string Dump() const;
-            // Parse. 
-            static Json Parse(const std::string & in, std::string & err);
-        private:
-            std::shared_ptr<JsonValue> m_ptr;
-    };
-
-~~~
-
 ## JsonType
     
 如上一篇文章所示，json数据类型应该有数值、字符串、布尔值、数组、对象和空值六种。那么我们可以先定义一个枚举类来代表这六种类型。
@@ -105,6 +68,54 @@ int main() {
 ~~~
 
 其中空值取NUL是为了避免与关键字NULL冲突
+
+
+## Json
+
+我对Json类的大致规划是如下面代码所示，使用C++11新添加的特性shared_ptr保证内存的安全
+
+~~~cpp
+    using array = std::vector<Json>;
+    using object = std::map<std::string, Json>;
+
+    class Json
+    {
+        public:
+            // Return the enclosed value if this is a number, 0 otherwise.
+            double GetDouble() const;
+            int GetInt() const;
+            // Return the enclosed value if this is a boolean, false otherwise.
+            bool GetBool() const;
+            // Return the enclosed string if this is a string, "" otherwise.
+            const std::string &GetString() const;
+            // Return the enclosed vector if this is an array, or an empty vector otherwise.
+            const array &GetArray() const;
+            // Return the enclosed map if this is an object, or an empty map otherwise.
+            const object &GetObject() const;
+            // Return a reference to arr[i] if this is an array, Json() otherwise.
+            const Json & operator[](size_t i) const;
+            // Return a reference to obj[key] if this is an object, Json() otherwise.
+            const Json & operator[](const std::string &key) const;
+
+            // Accessors
+            JsonType Type() const;
+            bool is_null()   const { return Type() == JsonType::NUL; }
+            bool is_number() const { return Type() == JsonType::NUMBER; }
+            bool is_bool()   const { return Type() == JsonType::BOOL; }
+            bool is_string() const { return Type() == JsonType::STRING; }
+            bool is_array()  const { return Type() == JsonType::ARRAY; }
+            bool is_object() const { return Type() == JsonType::OBJECT; }
+
+            // Serialize.
+            std::string Dump() const;
+            // Parse. 
+            static Json Parse(const std::string & in, std::string & err);
+        private:
+            std::shared_ptr<JsonValue> m_ptr;
+    };
+
+~~~
+
 
 ## JsonValue
 
