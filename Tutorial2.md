@@ -81,7 +81,7 @@
             explicit JsonArray(array&& value) : Value(move(value)) {};
         private:
             const array& GetArray() const override { return m_value; }
-            const Json& operator[](size_t i) const override { return (*m_ptr)[i]; };
+            const Json& operator[](size_t i) const;
     };
 
     class JsonObject final : public Value<JsonType::OBJECT, object>
@@ -91,6 +91,6 @@
             explicit JsonObject(object&& value) : Value(move(value)) {};
         private:
             const object& GetObject() const override { return m_value; }
-            const Json& operator[](const std::string& key) const override { return (*m_ptr)[key] };
+            const Json& operator[](const std::string& key) const;
     };
 ~~~
