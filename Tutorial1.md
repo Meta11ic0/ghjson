@@ -69,14 +69,46 @@ int main() {
 
 其中空值取NUL是为了避免与关键字NULL冲突
 
+## JsonValue
+
+因为有多种不同类型的 JSON 值，我们采用基类和派生类的方式来实现这个数据结构。基类可以定义通用的接口和操作，而派生类则可以根据具体类型来实现特定的功能。使用用std::string表示Json中的String，std::vector表示Json中的Array，std::map表示Json中的Object。为了节省类型检查的工作，对所有类型提供所有类型的取值接口，还需要为Array和Object提供对应的operator[]，意味着当你向一个Json类型为String的对象使用GetNumber()也是可行的，但是我们对类型没有正确匹配的取值操作返回默认值，这样能保证代码的容错性和灵活性。
+
+~~~cpp
+
+    using array = std::vector<Json>;
+    using object = std::map<std::string, Json>;
+    
+    template<JsonType tag, typename T>
+    class JsonValue
+    {
+        //..
+        public:         
+            const JsonType type() const { return tag; }
+
+            virtual double GetNumber() const;
+            virtual bool GetBool() const;
+            virtual const std::string& GetString() const;
+            virtual const array& GetArray() const;
+            virtual const Json& operator[](size_t i) const;
+            virtual const object& GetObject() const;
+            virtual const Json& operator[](const std::string& key) const;
+
+            virtual const std::string Dump() const = 0; 
+
+            virtual ~JsonValue();
+        private:
+            const T m_value;
+        //..
+    };
+~~~
+
 
 ## Json
 
-Json类的设计中，我用std::string表示Json中的String，std::vector表示Json中的Array，std::map表示Json中的Object。在Json类中提供所有类型的取值接口，还需要为Array和Object提供对应的operator[]，意味着当你向一个Json类型为String的对象使用GetNumber()也是可行的，但是我们对类型没有正确匹配的取值操作返回默认值，这样能保证代码的容错性和灵活性，同时也免去了类型检查的工作。然后我们还需要实现operator<、operator=等运算符重载用于实现比较。最后就是一开始提到的dump()和parse()。代码暂时设计如下：
+Json类的设计中，应该有两个成员变量，一个用于表示JsontType，一个用于表示JsonValue。这里我们使用了智能指针 std::shared_ptr 来管理 JsonValue 的实例，避免了内存泄漏问题。然后我们还需要实现operator<、operator=等运算符重载用于实现比较。最后就是一开始提到的dump()和parse()。代码暂时设计如下：
 
 ~~~cpp
-    using array = std::vector<Json>;
-    using object = std::map<std::string, Json>;
+
 
     class Json
     {
@@ -103,36 +135,6 @@ Json类的设计中，我用std::string表示Json中的String，std::vector表�
         private:
             std::shared_ptr<JsonValue> m_ptr;
             //..
-    };
-~~~
-
-
-## JsonValue
-
-因为有多种不同类型的 JSON 值，我采用基类和派生类的方式来实现这个数据结构。基类可以定义通用的接口和操作，而派生类则可以根据具体类型来实现特定的功能。
-
-~~~cpp
-    template<JsonType tag, typename T>
-    class JsonValue
-    {
-        //..
-        public:         
-            const JsonType type() const { return tag; }
-
-            virtual double GetNumber() const;
-            virtual bool GetBool() const;
-            virtual const std::string& GetString() const;
-            virtual const array& GetArray() const;
-            virtual const Json& operator[](size_t i) const;
-            virtual const object& GetObject() const;
-            virtual const Json& operator[](const std::string& key) const;
-
-            virtual const std::string Dump() const = 0; 
-
-            virtual ~JsonValue();
-        private:
-            const T m_value;
-        //..
     };
 ~~~
 

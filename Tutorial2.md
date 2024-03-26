@@ -1,26 +1,96 @@
 # 从一开始搭建json库教程（二）
 
-## JSON 数据结构细节补充
-
-### 取值
-在暴露出去的Json类中不限制取值函数的使用，每个派生类实现自己对应的特化的版本，一旦调用了不对应的取值函数，我们就返回默认值。
-
 ~~~cpp
-    //Json类
-    JsonType       Json::type()                           const { return m_ptr->type();      }
-    double         Json::GetDouble()                      const { return m_ptr->GetDouble(); }
-    int            Json::GetInt()                         const { return m_ptr->GetInt();    }
-    bool           Json::GetBool()                        const { return m_ptr->GetBool();   }
-    const          string & Json::GetString()             const { return m_ptr->GetString(); }
-    const array &  Json::GetArray()                       const { return m_ptr->GetArray();  }
-    const object & Json::GetObject()                      const { return m_ptr->GetObject(); }
-    const Json &   Json::operator[] (size_t i)            const { return (*m_ptr)[i];        }
-    const Json &   Json::operator[] (const string &key)   const { return (*m_ptr)[key];      }
+    template<JsonType tag, typename T>
+    class JsonValue
+    {
+        //..
+        public:         
+            const JsonType type() const { return tag; }
 
-    //JsonValue类 
-    double         JsonValue::GetDouble()                 const { return 0; }
-    int            JsonValue::GetInt()                    const { return 0; }
+            virtual double GetNumber() const;
+            virtual bool GetBool() const;
+            virtual const std::string& GetString() const;
+            virtual const array& GetArray() const;
+            virtual const Json& operator[](size_t i) const;
+            virtual const object& GetObject() const;
+            virtual const Json& operator[](const std::string& key) const;
+
+            virtual const std::string Dump() const = 0; 
+
+            virtual ~JsonValue();
+        private:
+            const T m_value;
+        //..
+    };
 ~~~
 
-NUMBER类我们都可以直接返回原生的“0”来表示默认值，但是，原生的C++中无法。首先为了保证数据一致性，通过将所有同一类的都映射为同一个static对象。
+现在先来完善JsonValue，上一章做了一些基础的通用的设计，我们需要针对JsonType中每个类型设计一个继承JsonValue的派生类，并且在其中设计一些独有的细节。除了代表空的NUL没法找到对应的m_value类型，其他应该都很容易想得到。
 
+解决方法也很简单，我们实现一个NUllClass即可，里面只实现我们需要的内容就好。
+
+~~~cpp
+    class NullClass
+    {
+    public:
+        bool operator == (NullClass) { return true; }
+        bool operator < (NullClass) { return false; }
+    };
+~~~
+
+现在每个派生类的实现就很容易了
+
+~~~cpp
+    class JsonNull final : public Value<JsonType::NUL, NullClass>
+    {
+        public:
+            JsonNull() : Value({}) {};
+    };
+
+    class JsonNumber final : public Value<JsonType::NUMBER, double>
+    {
+        public:
+            explicit JsonNumber(int value) : Value(value) {}
+        private:
+            double GetDouble() const override { return m_value; }
+            int GetInt() const override { return m_value; }
+    };
+
+    class JsonBool final : public Value<JsonType::BOOL, bool>
+    {
+        public:
+            explicit JsonBool(bool value) : Value(value) {}
+        private:
+            bool GetBool() const override { return m_value; }
+    };
+
+    class JsonString final : public Value<JsonType::STRING, std::string>
+    {
+        public:
+            explicit JsonString(const std::string& value) : Value(value) {}
+            explicit JsonString(std::string&& value) : Value(move(value)) {}
+        private:
+            const std::string& GetString() const override { return m_value; }
+
+    };
+
+    class JsonArray final : public Value<JsonType::ARRAY, array>
+    {
+        public:
+            explicit JsonArray(const array& value) : Value(value) {};
+            explicit JsonArray(array&& value) : Value(move(value)) {};
+        private:
+            const array& GetArray() const override { return m_value; }
+            const Json& operator[](size_t i) const override { return (*m_ptr)[i]; };
+    };
+
+    class JsonObject final : public Value<JsonType::OBJECT, object>
+    {
+        public:
+            explicit JsonObject(const object& value) : Value(value) {};
+            explicit JsonObject(object&& value) : Value(move(value)) {};
+        private:
+            const object& GetObject() const override { return m_value; }
+            const Json& operator[](const std::string& key) const override { return (*m_ptr)[key] };
+    };
+~~~
