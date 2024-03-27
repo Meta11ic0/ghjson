@@ -2,7 +2,45 @@
 
 上一章开始我们了解了我们什么是json以及json库需要做什么。最重要的是我们知道了我们做哪几部分工作，现在我们从搭建Json数据结构开始。
 
-## JsonType
+## class Json
+
+首先Json类中应该有存放对应JSON类型的数据的对象，所以先我们定义一个类用于存放实际数据以及数据类型，然后还需要定义一些获取数据的接口。
+
+首先因为JSON类型有很多种，存放数据的类的设计我们可以使用基类和派生类的方式，所以只需在Json类中包含一个基类的指针即可。使用std::string表示Json中的String，std::vector表示Json中的Array，std::map表示Json中的Object。为了节省类型检查的工作，对所有JSON类型提供所有SON类型的取值接口，还需要为Array和Object提供对应的operator[]，意味着当你向一个Json类型为STRING的对象使用GetNumber()也是可行的，但是我们对类型没有正确匹配的取值操作返回默认值，这样能保证代码的容错性和灵活性。
+
+代码暂时设计如下：
+
+~~~cpp
+    using array = std::vector<Json>;
+    using object = std::map<std::string, Json>;
+
+    class Json
+    {
+        public:
+            //..
+            //GetValue
+            double              GetNumber() const;
+            bool                GetBool()   const;
+            const std::string & GetString() const;
+            const array &       GetArray()  const;
+            const object &      GetObject() const;
+
+            const Json &        operator[](size_t i) const;
+            const Json &        operator[](const std::string &key) const;
+
+            //Comparisons
+            bool operator== (const Json &rhs) const;
+            bool operator<  (const Json &rhs) const;
+            //..
+        private:
+            std::shared_ptr<JsonValue> m_ptr;
+            //..
+    };
+~~~
+
+
+
+## Class JsonType
     
 如上一篇文章所示，json数据类型应该有数值、字符串、布尔值、数组、对象和空值六种。那么我们可以先定义一个枚举类来代表这六种类型。
 
@@ -69,21 +107,18 @@ int main() {
 
 其中空值取NUL是为了避免与关键字NULL冲突
 
-## JsonValue
+## Class JsonValue
 
-因为有多种不同类型的 JSON 值，我们采用基类和派生类的方式来实现这个数据结构。基类可以定义通用的接口和操作，而派生类则可以根据具体类型来实现特定的功能。使用用std::string表示Json中的String，std::vector表示Json中的Array，std::map表示Json中的Object。为了节省类型检查的工作，对所有类型提供所有类型的取值接口，还需要为Array和Object提供对应的operator[]，意味着当你向一个Json类型为String的对象使用GetNumber()也是可行的，但是我们对类型没有正确匹配的取值操作返回默认值，这样能保证代码的容错性和灵活性。
+因为有多种不同类型的 JSON 值，我们采用基类和派生类的方式来实现这个数据结构。基类可以定义通用的接口和操作，而派生类则可以根据具体类型来实现特定的功能。
 
-~~~cpp
-
-    using array = std::vector<Json>;
-    using object = std::map<std::string, Json>;
-    
+~~~cpp 
     template<JsonType tag, typename T>
     class JsonValue
     {
         //..
         public:         
-            const JsonType type() const { return tag; }
+            const JsonType type() const = 0;
+            virtual const std::string Dump() const = 0; 
 
             virtual double GetNumber() const;
             virtual bool GetBool() const;
@@ -93,48 +128,9 @@ int main() {
             virtual const object& GetObject() const;
             virtual const Json& operator[](const std::string& key) const;
 
-            virtual const std::string Dump() const = 0; 
-
             virtual ~JsonValue();
-        private:
-            const T m_value;
         //..
     };
 ~~~
 
-
-## Json
-
-Json类的设计中，应该有两个成员变量，一个用于表示JsontType，一个用于表示JsonValue。这里我们使用了智能指针 std::shared_ptr 来管理 JsonValue 的实例，避免了内存泄漏问题。然后我们还需要实现operator<、operator=等运算符重载用于实现比较。最后就是一开始提到的dump()和parse()。代码暂时设计如下：
-
-~~~cpp
-
-
-    class Json
-    {
-        public:
-            //..
-            //GetValue
-            double GetNumber() const;
-            bool GetBool() const;
-            const std::string &GetString() const;
-            const array &GetArray() const;
-            const object &GetObject() const;
-            const Json & operator[](size_t i) const;
-            const Json & operator[](const std::string &key) const;
-
-            //Comparisons
-            bool operator== (const Json &rhs) const;
-            bool operator<  (const Json &rhs) const;
-            // Serialize.
-            std::string Dump() const;
-
-            // Parse. 
-            static Json Parse(const std::string & in, std::string & err);
-
-        private:
-            std::shared_ptr<JsonValue> m_ptr;
-            //..
-    };
-~~~
 

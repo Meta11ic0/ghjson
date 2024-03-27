@@ -4,10 +4,10 @@
 
 ## 默认值的设置
 
-我们返回的默认值在整个程序运行过程中都应该是不变的，不能被修改的。所以只需在内存中分配一次，之后可以重复使用，而不需要每次调用函数时都重新创建这些空的容器。
+我们返回的默认JsonValue值在整个程序运行过程中都应该是不变的，不能被修改的。所以只需在内存中分配一次，之后可以重复使用，而不需要每次调用函数时都重新创建这些空的容器。
 
 ~~~cpp
-    class Default_Value
+    class Default_JsonValue
     {
         public:
             const shared_ptr<JsonValue> null = make_shared<JsonNull>();
@@ -16,12 +16,12 @@
             const std::string                  empty_string;
             const array                        empty_vector;
             const object                       empty_map;
-            Default_Value(){};       
+            Default_JsonValue(){};       
     }
 
-    static const Default_Value & GetDefault()
+    static const Default_JsonValue & GetDefaultJsonValue()
     {
-        static const Default_Value d{};
+        static const Default_JsonValue d{};
         return d;
     }
 ~~~
@@ -29,32 +29,50 @@
 然后对于取值函数的非特化实现
 
 ~~~cpp
+    //..
     //Json
-    double              Json::GetNumber()      const { return m_ptr->GetNumber();     }
-    bool                Json::GetBool()        const { return m_ptr->GetBool();       }
-    const std::string & Json::GetString()      const { return m_ptr->GetString();     }
-    const array &       Json::GetArray()       const { return m_ptr->GetArray();      }
-    const object &      Json::GeObject()       const { return m_ptr->GeObject();      }
-
+    double              Json::GetNumber() const { return m_ptr->GetNumber(); }
+    bool                Json::GetBool()   const { return m_ptr->GetBool();   }
+    const std::string & Json::GetString() const { return m_ptr->GetString(); }
+    const array &       Json::GetArray()  const { return m_ptr->GetArray();  }
+    const object &      Json::GeObject()  const { return m_ptr->GeObject();  }
+    //..
     //JsonValue
-    double              JsonValue::GetNumber() const { return 0;                      }
-    bool                JsonValue::GetBool()   const { return false;                  }
-    const std::string & JsonValue::GetString() const { return GetDefault().empty_string; }
-    const array &       JsonValue::GetArray()  const { return GetDefault().empty_vector; }
-    const object &      JsonValue::GeObject()  const { return GetDefault().empty_map;    }
+    double              JsonValue::GetNumber() const { return 0;                                  }
+    bool                JsonValue::GetBool()   const { return false;                              }
+    const std::string & JsonValue::GetString() const { return GetDefaultJsonValue().empty_string; }
+    const array &       JsonValue::GetArray()  const { return GetDefaultJsonValue().empty_vector; }
+    const object &      JsonValue::GeObject()  const { return GetDefaultJsonValue().empty_map;    }
+    //..
 ~~~
 
-但对于ARRAY和OBJECT来说，他们有返回值类别为Json的operator[]，上一章特化的版本还没有实现，普通的返回默认值的也还没实现。为啥放到现场才一起讲是因为这两个类别的operator[]都遵循一个逻辑，要判断想取的值是否存在，存在返回目标，不存在也是返回默认值。那么这里的默认值类型为Json，我们将默认值设定一个类别为JsonNull的对象。这个时候回想起来开头我们设置的默认值，其实JsonNull的对象存在一个也就行了。同理，JsonBool只需存在两个分别代表true和false即可，全局可以共享。
+但对于ARRAY和OBJECT来说，他们n的operator[]还没实现。这两个类别的operator[]都遵循一个逻辑，要判断想取的值是否存在，存在则返回目标，不存在也是返回默认值。那么这里的默认值类型为Json。这个默认值整个程序运行过程中都应该是不变的，不能被修改的了。所以我们如法炮制定义一个局部静态变量。
 
 ~~~cpp
     //..
-    Json::Json() noexcept                  : m_ptr(GetDefault().null) {}
-    Json::Json(std::nullptr_t) noexcept    : m_ptr(GetDefault().null) {}
-    Json::Json(bool value)                 : m_ptr(value ? GetDefault().t : GetDefault().f) {}
+    static const Json & GetJsonNull()
+    {
+        static const Json jsonnull; //会调用Json()，从而要使用GetDefaultJsonValue().null，所以将Json默认值跟JsonValue默认值分隔开，不然会有循环依赖
+        return d;
+    }    
+    //..
+    Json::Json() noexcept                  : m_ptr(GetDefaultJsonValue().null) {}
+    Json::Json(std::nullptr_t) noexcept    : m_ptr(GetDefaultJsonValue().null) {}
+    Json::Json(bool value)                 : m_ptr(value ? GetDefaultJsonValue().t : GetDefaultJsonValue().f) {}
     //..
     const Json & Json::operator[] (size_t i)          const { return (*m_ptr)[i];           }
     const Json & Json::operator[] (const string &key) const { return (*m_ptr)[key];         }
     //..
-    const Json & JsonValue::operator[] (size_t)         const { return GetDefault().null; }
-    const Json & JsonValue::operator[] (const string &) const { return GetDefault().null; }
+    const Json & JsonValue::operator[] (size_t)         const { return GetJsonNull(); }
+    const Json & JsonValue::operator[] (const string &) const { return GetJsonNull(); }
+    //..补齐上一章没特化的operator[]
+    const Json & JsonArray::operator[] (size_t i) const 
+    { 
+        return (i > m_value.size() ? GetJsonNull() : m_value[i]);
+    }
+    const Json & JsonObject::operator[] (const string & key) const 
+    { 
+        auto iter = m_value.find(key);
+        return (iter == m_value.end() ? GetJsonNull(): m_value[key]); 
+    }
 ~~~
