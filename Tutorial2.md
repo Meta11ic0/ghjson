@@ -1,31 +1,12 @@
 # 从一开始搭建json库教程（二）
 
+上一章定义了中间层class Value，实现了可以公用的构造函数、用于返回JSON类型的Tyoe函数，现在先来实现各个JSON类型对应的派生类。但JSON类型为NUL的对象，我们没有在C++可以直接使用的，如果使用nullptr的话代码也不好统一，而且nullptr也无法进行比较。
+
 ~~~cpp
-    template<JsonType tag, typename T>
-    class JsonValue
-    {
-        //..
-        public:         
-            const JsonType type() const { return tag; }
-
-            virtual double GetNumber() const;
-            virtual bool GetBool() const;
-            virtual const std::string& GetString() const;
-            virtual const array& GetArray() const;
-            virtual const Json& operator[](size_t i) const;
-            virtual const object& GetObject() const;
-            virtual const Json& operator[](const std::string& key) const;
-
-            virtual const std::string Dump() const = 0; 
-
-            virtual ~JsonValue();
-        private:
-            const T m_value;
-        //..
-    };
+    //..
+    if(nullptr1 < nullptr2) //报错
+    //..
 ~~~
-
-现在先来完善JsonValue，上一章做了一些基础的通用的设计，我们需要针对JsonType中每个类型设计一个继承JsonValue的派生类，并且在其中设计一些独有的细节。除了代表空的NUL没法找到对应的m_value类型，其他应该都很容易想得到。
 
 解决方法也很简单，我们实现一个NUllClass即可，里面只实现我们需要的内容就好。
 
