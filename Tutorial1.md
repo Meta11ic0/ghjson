@@ -21,8 +21,8 @@
     {
         public:
             //..
+            JsonType Type() const;
             //GetValue
-            JsonType            Type()      const;
             double              GetNumber() const;
             bool                GetBool()   const;
             const std::string & GetString() const;
@@ -31,7 +31,6 @@
 
             const Json &        operator[](size_t i) const;
             const Json &        operator[](const std::string &key) const;
-
             //Comparisons
             bool operator== (const Json &rhs) const;
             bool operator<  (const Json &rhs) const;
@@ -46,7 +45,7 @@
 
 ## Class JsonType
     
-如上一篇文章所示，json数据类型应该有数值、字符串、布尔值、数组、对象和空值六种。那么我们可以先定义一个枚举类来代表这六种类型。
+JSON类型应该有数值、字符串、布尔值、数组、对象和空值六种。那么我们可以先定义一个枚举类来代表这六种类型。 
 
 ### Enum vs Enum Class
 
@@ -113,27 +112,36 @@ int main() {
 
 ## Class JsonValue
 
-基类class JsonValue可以定义通用的接口和操作，而派生类则可以根据具体类型来实现特定的功能。派生类的实现因为要存储一个JsonType和实际值的类型（譬如：double，string），使用Template是比较合适的。但一旦在class JsonValue这一层使用Template的话，class Json中的JsonValue指针就会比较臃肿。所以我们在实际使用的派生类如class JsonNumber、class JsonString和基类class JsonValue中加一个中间层Value，用于实现需要Template定义后的通用的函数。
+基类class JsonValue可以定义通用的接口和操作，而派生类则可以根据具体类型来实现特定的功能。派生类的实现因为要存储一个JsonType和实际值的类型（譬如：double，string），使用template设计是比较合适的。但一旦在class JsonValue这一层使用Template的话，class Json中的JsonValue指针就会比较臃肿。所以我们在实际使用的派生类如class JsonNumber、class JsonString和基类class JsonValue中加一个中间层class Value，用于实现需要template定义后的通用的函数。
 
 ~~~cpp 
     class JsonValue
     {
         //..
-        public:
-            const JsonType type() const = 0;
-            virtual const std::string Dump() const = 0; 
+        public:            
+            virtual const JsonType type() const = 0;
+            virtual double              GetNumber() const;
+            virtual bool                GetBool() const;
+            virtual const std::string & GetString() const;
+            virtual const array &       GetArray() const;
+            virtual const object &      GetObject() const;
 
-            virtual double GetNumber() const;
-            virtual bool GetBool() const;
-            virtual const std::string& GetString() const;
-            virtual const array& GetArray() const;
             virtual const Json& operator[](size_t i) const;
-            virtual const object& GetObject() const;
             virtual const Json& operator[](const std::string& key) const;
 
             virtual ~JsonValue();
         //..
     };
+
+    
+    template <JsonType tag, typename T>
+    class Value : public JsonValue
+    {
+        protected:
+            explicit Value(const T &value) : m_value(value) {}
+            explicit Value(T &&value)      : m_value(move(value)) {}
+
+            JsonType Type() const override { return tag; }
+            const T m_value;
+    }
 ~~~
-
-

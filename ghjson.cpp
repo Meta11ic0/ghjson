@@ -2,26 +2,33 @@
 
 namespace ghjson
 {
-    template<JsonType tag, typename T>
     class JsonValue
     {
         //..
-        public:         
-            const JsonType type() const { return tag; }
+        public:            
+            virtual const JsonType type() const = 0;
+            virtual double              GetNumber() const;
+            virtual bool                GetBool() const;
+            virtual const std::string & GetString() const;
+            virtual const array &       GetArray() const;
+            virtual const object &      GetObject() const;
 
-            virtual double GetNumber() const;
-            virtual bool GetBool() const;
-            virtual const std::string& GetString() const;
-            virtual const array& GetArray() const;
             virtual const Json& operator[](size_t i) const;
-            virtual const object& GetObject() const;
             virtual const Json& operator[](const std::string& key) const;
 
-            virtual const std::string Dump() const = 0; 
-
             virtual ~JsonValue();
-        private:
-            const T m_value;
         //..
     };
+
+    
+    template <JsonType tag, typename T>
+    class Value : public JsonValue
+    {
+        protected:
+            explicit Value(const T &value) : m_value(value) {}
+            explicit Value(T &&value)      : m_value(move(value)) {}
+
+            JsonType Type() const override { return tag; }
+            const T m_value;
+    }
 }
