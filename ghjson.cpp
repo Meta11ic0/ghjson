@@ -7,6 +7,7 @@ namespace ghjson
         //..
         public:            
             virtual const JsonType type() const = 0;
+            
             virtual double              GetNumber() const;
             virtual bool                GetBool() const;
             virtual const std::string & GetString() const;
