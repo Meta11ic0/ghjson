@@ -13,9 +13,9 @@
 ~~~cpp
     class NullClass
     {
-    public:
-        bool operator == (NullClass) { return true; }
-        bool operator < (NullClass) { return false; }
+        public:
+            bool operator == (NullClass) { return true; }
+            bool operator < (NullClass) { return false; }
     };
 ~~~
 
