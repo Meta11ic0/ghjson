@@ -8,7 +8,6 @@
 namespace ghjson
 {
     class Json;
-    template<JsonType tag, typename T>
     class JsonValue;
 
     using array = std::vector<Json>;
