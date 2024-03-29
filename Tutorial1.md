@@ -119,7 +119,8 @@ int main() {
     {
         //..
         public:            
-            virtual const JsonType type() const = 0;
+            virtual const JsonType Type() const = 0;
+            
             virtual double              GetNumber() const;
             virtual bool                GetBool() const;
             virtual const std::string & GetString() const;
@@ -143,5 +144,5 @@ int main() {
 
             JsonType Type() const override { return tag; }
             const T m_value;
-    }
+    };
 ~~~

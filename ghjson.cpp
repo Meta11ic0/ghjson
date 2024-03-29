@@ -6,7 +6,7 @@ namespace ghjson
     {
         //..
         public:            
-            virtual const JsonType type() const = 0;
+            virtual JsonType Type() const = 0;
             
             virtual double              GetNumber() const;
             virtual bool                GetBool() const;
@@ -31,7 +31,7 @@ namespace ghjson
 
             JsonType Type() const override { return tag; }
             const T m_value;
-    }
+    };
 
     class NullClass
     {
@@ -49,10 +49,9 @@ namespace ghjson
     class JsonNumber final : public Value<JsonType::NUMBER, double>
     {
         public:
-            explicit JsonNumber(int value) : Value(value) {}
+            explicit JsonNumber(double value) : Value(value) {}
         private:
-            double GetDouble() const override { return m_value; }
-            int GetInt() const override { return m_value; }
+            double GetNumber() const override { return m_value; }
     };
 
     class JsonBool final : public Value<JsonType::BOOL, bool>
