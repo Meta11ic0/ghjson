@@ -147,9 +147,23 @@ namespace ghjson
     const Json & JsonObject::operator[] (const std::string & key) const 
     { 
         auto iter = m_value.find(key);
-        return (iter == m_value.end() ? GetJsonNull() : iter->second); //这里不能使用m_value[key],因为m_value是const对象，这个函数也是const函数，而m_value[key]是会在key不存在的时候新建一个值，所以编译器会报错
+        return (iter == m_value.end() ? GetJsonNull() : iter->second); 
     }
     //GetValue
+
+    //Comparisons
+    bool Json::operator== (const Json &rhs) const
+    {
+        if(this->Type() != rhs.Type())
+            return false;
+        
+    }
+
+    bool Json::operator<  (const Json &rhs) const
+    {
+
+    }
+    //Comparisons
 
     //Construtor
     Json::Json() noexcept                  : m_ptr(GetDefaultJsonValue().null) {}
