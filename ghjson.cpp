@@ -2,9 +2,9 @@
 
 namespace ghjson
 {
+    //JsonValue
     class JsonValue
     {
-        //..
         public:            
             virtual JsonType Type() const = 0;
             
@@ -17,11 +17,9 @@ namespace ghjson
             virtual const Json& operator[](size_t i) const;
             virtual const Json& operator[](const std::string& key) const;
 
-            virtual ~JsonValue();
-        //..
+            virtual ~JsonValue(){};
     };
 
-    
     template <JsonType tag, typename T>
     class Value : public JsonValue
     {
@@ -91,4 +89,71 @@ namespace ghjson
             const object& GetObject() const override { return m_value; }
             const Json& operator[](const std::string& key) const;
     };
+    //JsonValue
+
+    //Static Value
+    class Default_JsonValue
+    {
+        public:
+            const std::shared_ptr<JsonValue> null = std::make_shared<JsonNull>();
+            const std::shared_ptr<JsonValue> t    = std::make_shared<JsonBool>(true);
+            const std::shared_ptr<JsonValue> f    = std::make_shared<JsonBool>(false);
+            const std::string empty_string;
+            const array       empty_vector;
+            const object      empty_map;
+            Default_JsonValue(){};
+    };
+
+    static const Default_JsonValue & GetDefaultJsonValue()
+    {
+        static const Default_JsonValue d{};
+        return d;
+    };
+
+    static const Json & GetJsonNull()
+    {
+        static const Json jsonnull; //会调用Json()，从而要使用GetDefaultJsonValue().null，所以将Json默认值跟JsonValue默认值分隔开，不然会有循环依赖
+        return jsonnull;
+    };
+    //Static Value
+
+    //GetType
+    JsonType Json::Type() const { return m_ptr->Type(); }
+    //GetType
+
+    //GetValue
+    //Json
+    double              Json::GetNumber() const { return m_ptr->GetNumber(); }
+    bool                Json::GetBool()   const { return m_ptr->GetBool();   }
+    const std::string & Json::GetString() const { return m_ptr->GetString(); }
+    const array &       Json::GetArray()  const { return m_ptr->GetArray();  }
+    const object &      Json::GetObject() const { return m_ptr->GetObject();  }
+    //JsonValue
+    double              JsonValue::GetNumber() const { return 0;                                  }
+    bool                JsonValue::GetBool()   const { return false;                              }
+    const std::string & JsonValue::GetString() const { return GetDefaultJsonValue().empty_string; }
+    const array &       JsonValue::GetArray()  const { return GetDefaultJsonValue().empty_vector; }
+    const object &      JsonValue::GetObject() const { return GetDefaultJsonValue().empty_map;    }
+    //operator[]
+    const Json & Json::operator[] (size_t i)                 const { return (*m_ptr)[i];   }
+    const Json & Json::operator[] (const std::string &key)   const { return (*m_ptr)[key]; }
+    const Json & JsonValue::operator[] (size_t)              const { return GetJsonNull(); }
+    const Json & JsonValue::operator[] (const std::string &) const { return GetJsonNull(); }
+    //特化的operator[]
+    const Json & JsonArray::operator[] (size_t i) const 
+    { 
+        return (i > m_value.size() ? GetJsonNull() : m_value[i]);
+    }
+    const Json & JsonObject::operator[] (const std::string & key) const 
+    { 
+        auto iter = m_value.find(key);
+        return (iter == m_value.end() ? GetJsonNull() : iter->second); //这里不能使用m_value[key],因为m_value是const对象，这个函数也是const函数，而m_value[key]是会在key不存在的时候新建一个值，所以编译器会报错
+    }
+    //GetValue
+
+    //Construtor
+    Json::Json() noexcept                  : m_ptr(GetDefaultJsonValue().null) {}
+    Json::Json(std::nullptr_t) noexcept    : m_ptr(GetDefaultJsonValue().null) {}
+    Json::Json(bool value)                 : m_ptr(value ? GetDefaultJsonValue().t : GetDefaultJsonValue().f) {}
+    //Construtor
 }

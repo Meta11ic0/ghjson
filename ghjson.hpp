@@ -21,8 +21,16 @@ namespace ghjson
     class Json
     {
         public:
-            //..
+            //Constructor
+            Json() noexcept;
+            Json(std::nullptr_t) noexcept;
+            Json(bool value);
+            //Constructor
+
+            //GetType
             JsonType Type() const;
+            //GetType
+
             //GetValue
             double              GetNumber() const;
             bool                GetBool()   const;
@@ -32,12 +40,14 @@ namespace ghjson
 
             const Json &        operator[](size_t i) const;
             const Json &        operator[](const std::string &key) const;
+            //GetValue
+
             //Comparisons
             bool operator== (const Json &rhs) const;
             bool operator<  (const Json &rhs) const;
-            //..
+            //Comparisons
+            
         private:
             std::shared_ptr<JsonValue> m_ptr;
-            //..
     };
 }

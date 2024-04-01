@@ -1,7 +1,7 @@
 # 从一开始搭建json库教程（二）
 
 ## class JsonValue的派生类
-上一章的对于存放实际数据的基类class JsonValue，定义了中间层class Value，实现了可以公用的构造函数、用于返回JSON类型的Tyoe函数，现在先来实现各个JSON类型对应的派生类。但JSON类型为NUL的对象，我们没有在C++可以直接使用的，如果使用nullptr的话代码也不好统一，而且nullptr也无法进行比较。
+上一章的对于存放实际数据的基类class JsonValue，定义了中间层class Value，实现了可以公用的构造函数、用于返回JSON类型的Tyoe函数，现在先来实现各个JSON类型对应的派生类。但其中JSON类型为NUL的对象，我们没有在C++可以直接使用的，如果使用nullptr的话代码也不好统一，而且nullptr也无法进行比较操作。
 
 ~~~cpp
     //..
@@ -9,7 +9,7 @@
     //..
 ~~~
 
-解决方法也很简单，我们实现一个NUllClass即可，里面只实现我们需要的内容就好。
+所以我们我们实现一个NUllClass，里面只实现我们需要的内容就好。
 
 ~~~cpp
     class NullClass
@@ -34,8 +34,7 @@
         public:
             explicit JsonNumber(int value) : Value(value) {}
         private:
-            double GetDouble() const override { return m_value; }
-            int GetInt() const override { return m_value; }
+            double GetNumber() const override { return m_value; }
     };
 
     class JsonBool final : public Value<JsonType::BOOL, bool>
