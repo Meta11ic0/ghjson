@@ -74,3 +74,59 @@
         return (iter == m_value.end() ? GetJsonNull() : iter->second); //这里不能使用m_value[key],因为m_value是const对象，这个函数也是const函数，而m_value[key]是会在key不存在的时候新建一个值，所以编译器会报错
     }
 ~~~
+
+## 比较的实现
+
+因为在Json类的实例对象中，没法直接调用成员变量m_ptr的成员m_value，所以在value类中再实现成员函数equals和less。
+~~~cpp
+
+    template <JsonType tag, typename T>
+    class Value : public JsonValue
+    {
+        //..
+        protected:
+            // Comparisons
+            bool equals(const JsonValue * other) const {
+                return m_value == static_cast<const Value<tag, T> *>(other)->m_value;
+            }
+            bool less(const JsonValue * other) const {
+                return m_value < static_cast<const Value<tag, T> *>(other)->m_value;
+            }
+        //..
+    };
+    bool Json::operator== (const Json &rhs) const
+    {
+        if(m_ptr == rhs.m_ptr)
+            return true;
+        else if(m_ptr->Type() != rhs.Type())
+            return false;
+        
+        //没法直接return m_ptr->m_value == rhs.m_value;
+        return m_ptr->equals(rhs.m_ptr->get())
+    }
+
+    bool Json::operator<  (const Json &rhs) const
+    {
+        if (m_ptr == rhs.m_ptr)
+            return false;
+        if (m_ptr->type() != rhs.m_ptr->type())
+            return m_ptr->type() < rhs.m_ptr->type();
+
+        return m_ptr->less(rhs.m_ptr.get());
+    }
+~~~
+
+只要实现了上面相等和小于，其他的比较操作就能通过调用来这两个函数实现
+
+~~~cpp
+    class Json
+    {
+        public:
+        //..
+            bool operator!= (const Json &rhs) const { return !(*this == rhs); }
+            bool operator<= (const Json &rhs) const { return !(rhs < *this); }
+            bool operator>  (const Json &rhs) const { return  (rhs < *this); }
+            bool operator>= (const Json &rhs) const { return !(*this < rhs); }
+        //..
+    }
+~~~

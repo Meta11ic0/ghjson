@@ -45,6 +45,10 @@ namespace ghjson
             //Comparisons
             bool operator== (const Json &rhs) const;
             bool operator<  (const Json &rhs) const;
+            bool operator!= (const Json &rhs) const { return !(*this == rhs); }
+            bool operator<= (const Json &rhs) const { return !(rhs < *this); }
+            bool operator>  (const Json &rhs) const { return  (rhs < *this); }
+            bool operator>= (const Json &rhs) const { return !(*this < rhs); }
             //Comparisons
             
         private:

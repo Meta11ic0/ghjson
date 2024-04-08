@@ -29,6 +29,15 @@ namespace ghjson
 
             JsonType Type() const override { return tag; }
             const T m_value;
+
+            // Comparisons
+            bool equals(const JsonValue * other) const {
+                return m_value == static_cast<const Value<tag, T> *>(other)->m_value;
+            }
+            bool less(const JsonValue * other) const {
+                return m_value < static_cast<const Value<tag, T> *>(other)->m_value;
+            }
+
     };
 
     class NullClass
