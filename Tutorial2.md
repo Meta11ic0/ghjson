@@ -1,7 +1,7 @@
 # 从一开始搭建json库教程（二）
 
 ## class JsonValue的派生类
-上一章的对于存放实际数据的基类class JsonValue，定义了中间层class Value，实现了可以公用的构造函数、用于返回JSON类型的Tyoe函数，现在先来实现各个JSON类型对应的派生类。但其中JSON类型为NUL的对象，我们没有在C++可以直接使用的，如果使用nullptr的话代码也不好统一，而且nullptr也无法进行比较操作。
+上一章定义了基类class JsonValue，定义了中间层class Value，现在先来实现各个JSON类型对应的派生类。但我们先考虑一个事情，其中JSON类型为NUL的对象，我们没有在C++可以直接使用的数据类型，如果使用nullptr的话代码也不好统一，而且nullptr也无法进行比较操作。
 
 ~~~cpp
     //..

@@ -4,9 +4,13 @@
 
 ## class Json
 
-首先class Json中应该有存放对应JSON类型的数据的对象，所以先我们定义一个类用于存放实际数据以及数据类型，然后还需要定义一些获取数据的接口。
+首先Json数据结构中应该有实际数据和数据类型，还有获取数据的接口。所以我们设计为一个基础的Json类，其中包含JsonValue和JsonType。
 
-首先因为JSON类型有很多种，存放数据的类的设计我们可以使用基类和派生类的方式，基类JsonValue中包含一些通用的成员，派生类按类型实现为JsonNumber、JsonString等，这样的话只需在class Json中包含一个基类JsonValue的指针即可。使用std::string表示JSON类型的STRING，std::vector表示JSON类型的ARRAY，std::map表示JSON类型的OBJECT。为了节省类型检查的工作，对所有JSON类型提供所有JSON类型的取值接口，还需要为ARRAY和OBJECT提供对应的operator[]，意味着当你向一个JSON类型为STRING的对象使用GetNumber()也是可行的，但是我们对类型没有正确匹配的取值操作返回默认值，这样能保证代码的容错性和灵活性。
+因为JSON数据类型有很多种，所以我们可以使用基类和派生类的方式进行设计。
+
+基类JsonValue中包含一些通用的成员，派生类按类型实现为JsonNumber、JsonString等，这样的话只需在class Json中包含一个基类JsonValue的指针即可。
+
+使用std::string表示JSON类型的STRING，std::vector表示JSON类型的ARRAY，std::map表示JSON类型的OBJECT。为了节省类型检查的工作，对所有JSON类型提供所有JSON类型的取值接口，还需要为ARRAY和OBJECT提供对应的operator[]，意味着当你向一个JSON类型为STRING的对象使用GetNumber()也是可行的，但是我们对类型没有正确匹配的取值操作返回默认值，这样能保证代码的容错性和灵活性。
 
 代码暂时设计如下：
 
@@ -112,7 +116,9 @@ int main() {
 
 ## Class JsonValue
 
-基类class JsonValue可以定义通用的接口和操作，而派生类则可以根据具体类型来实现特定的功能。派生类的实现因为要存储一个JsonType和实际值的类型（譬如：double，string），使用template设计是比较合适的。但一旦在class JsonValue这一层使用Template的话，class Json中的JsonValue指针就会比较臃肿。所以我们在实际使用的派生类如class JsonNumber、class JsonString和基类class JsonValue中加一个中间层class Value，用于实现需要template定义后的通用的函数。
+基类class JsonValue可以定义通用的接口和操作，而派生类则可以根据具体类型来实现特定的功能。
+
+派生类的实现因为要存储一个JsonType和实际值的类型（譬如：double，string），使用template设计是比较合适的。但一旦在class JsonValue这一层使用Template的话，class Json中的JsonValue指针就会比较臃肿。所以我们在实际使用的派生类如class JsonNumber、class JsonString和基类class JsonValue中加一个中间层class Value，用于实现需要值的类型被定义后的通用的函数。
 
 ~~~cpp 
     class JsonValue
