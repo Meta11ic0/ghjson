@@ -101,7 +101,7 @@ namespace ghjson
     //JsonValue
 
     //Static Value
-    class Default_JsonValue
+    class DefaultValue
     {
         public:
             const std::shared_ptr<JsonValue> null = std::make_shared<JsonNull>();
@@ -110,12 +110,12 @@ namespace ghjson
             const std::string empty_string;
             const array       empty_vector;
             const object      empty_map;
-            Default_JsonValue(){};
+            DefaultValue(){};
     };
 
-    static const Default_JsonValue & GetDefaultJsonValue()
+    static const DefaultValue & GetDefaultValue()
     {
-        static const Default_JsonValue d{};
+        static const DefaultValue d{};
         return d;
     };
 
@@ -140,9 +140,9 @@ namespace ghjson
     //JsonValue
     double              JsonValue::GetNumber() const { return 0;                                  }
     bool                JsonValue::GetBool()   const { return false;                              }
-    const std::string & JsonValue::GetString() const { return GetDefaultJsonValue().empty_string; }
-    const array &       JsonValue::GetArray()  const { return GetDefaultJsonValue().empty_vector; }
-    const object &      JsonValue::GetObject() const { return GetDefaultJsonValue().empty_map;    }
+    const std::string & JsonValue::GetString() const { return GetDefaultValue().empty_string; }
+    const array &       JsonValue::GetArray()  const { return GetDefaultValue().empty_vector; }
+    const object &      JsonValue::GetObject() const { return GetDefaultValue().empty_map;    }
     //operator[]
     const Json & Json::operator[] (size_t i)                 const { return (*m_ptr)[i];   }
     const Json & Json::operator[] (const std::string &key)   const { return (*m_ptr)[key]; }
@@ -163,20 +163,36 @@ namespace ghjson
     //Comparisons
     bool Json::operator== (const Json &rhs) const
     {
-        if(this->Type() != rhs.Type())
+        if(m_ptr == rhs.m_ptr)
+            return true;
+        else if(m_ptr->Type() != rhs.Type())
             return false;
         
+        //没法直接return m_ptr->m_value == rhs.m_value;
+        return m_ptr->equals(rhs.m_ptr.get());     
     }
 
     bool Json::operator<  (const Json &rhs) const
     {
+        if (m_ptr == rhs.m_ptr)
+            return false;
+        if (m_ptr->Type() != rhs.m_ptr->Type())
+            return m_ptr->Type() < rhs.m_ptr->Type();
 
+        return m_ptr->less(rhs.m_ptr.get());
     }
     //Comparisons
 
     //Construtor
-    Json::Json() noexcept                  : m_ptr(GetDefaultJsonValue().null) {}
-    Json::Json(std::nullptr_t) noexcept    : m_ptr(GetDefaultJsonValue().null) {}
-    Json::Json(bool value)                 : m_ptr(value ? GetDefaultJsonValue().t : GetDefaultJsonValue().f) {}
-    //Construtor
+    Json::Json() noexcept                : m_ptr(GetDefaultValue().null) {}
+    Json::Json(std::nullptr_t) noexcept  : m_ptr(GetDefaultValue().null) {}
+    Json::Json(double value)             : m_ptr(std::make_shared<JsonNumber>(value)) {}
+    Json::Json(bool value)               : m_ptr(value ? GetDefaultValue().t : GetDefaultValue().f) {}
+    Json::Json(const std::string &value) : m_ptr(std::make_shared<JsonString>(value)) {}
+    Json::Json(std::string &&value)      : m_ptr(std::make_shared<JsonString>(move(value))) {}
+    Json::Json(const char * value)       : m_ptr(std::make_shared<JsonString>(value)) {}
+    Json::Json(const array &values)      : m_ptr(std::make_shared<JsonArray>(values)) {}
+    Json::Json(array &&values)           : m_ptr(std::make_shared<JsonArray>(move(values))) {}
+    Json::Json(const object &values)     : m_ptr(std::make_shared<JsonObject>(values)) {}
+    Json::Json(object &&values)          : m_ptr(std::make_shared<JsonObject>(move(values))) {}    //Construtor
 }

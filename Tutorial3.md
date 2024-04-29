@@ -4,10 +4,10 @@
 
 ## 默认值的设置
 
-我们返回的默认JsonValue值在整个程序运行过程中都应该是不变的，不能被修改的。所以只需在内存中分配一次，之后可以重复使用，而不需要每次调用函数时都重新创建这些空的容器。
+我们返回的默认值在整个程序运行过程中都应该是不变的，不能被修改的。所以只需在内存中分配一次，之后可以重复使用，而不需要每次调用函数时都重新创建这些空的容器。
 
 ~~~cpp
-    class Default_JsonValue
+    class DefalutValue
     {
         public:
             const shared_ptr<JsonValue> null = make_shared<JsonNull>();
@@ -16,12 +16,12 @@
             const std::string                  empty_string;
             const array                        empty_vector;
             const object                       empty_map;
-            Default_JsonValue(){};       
+            DefalutValue(){};       
     };
 
-    static const Default_JsonValue & GetDefaultJsonValue()
+    static const DefalutValue & GetDefaultValue()
     {
-        static const Default_JsonValue d{};
+        static const DefalutValue d{};
         return d;
     };
 ~~~
@@ -39,25 +39,22 @@
     //JsonValue
     double              JsonValue::GetNumber() const { return 0;                                  }
     bool                JsonValue::GetBool()   const { return false;                              }
-    const std::string & JsonValue::GetString() const { return GetDefaultJsonValue().empty_string; }
-    const array &       JsonValue::GetArray()  const { return GetDefaultJsonValue().empty_vector; }
-    const object &      JsonValue::GetObject() const { return GetDefaultJsonValue().empty_map;    }
+    const std::string & JsonValue::GetString() const { return GetDefaultValue().empty_string; }
+    const array &       JsonValue::GetArray()  const { return GetDefaultValue().empty_vector; }
+    const object &      JsonValue::GetObject() const { return GetDefaultValue().empty_map;    }
     //..
 ~~~
 
-但注意到，对于ARRAY和OBJECT来说，他们n的operator[]特化还没实现。这两个类别的operator[]都遵循一个逻辑，要判断想取的值是否存在，存在则返回目标，不存在也是返回默认值。那么这里的默认值类型为Json。这个默认值整个程序运行过程中都应该是不变的，不能被修改的了。所以我们如法炮制定义一个局部静态变量。
+但注意到，对于ARRAY和OBJECT来说，他们n的operator[]特化还没实现。这两个类别的operator[]都遵循一个逻辑，要判断合法性，不合法是返回默认值，这里的这个默认值类型为Json而不是JsonValue，我们如法炮制定义一个JSON类型为NULL的局部静态变量。
 
 ~~~cpp
     //..
     static const Json & GetJsonNull()
     {
-        static const Json jsonnull; //会调用Json()，从而要使用GetDefaultJsonValue().null，所以将Json默认值跟JsonValue默认值分隔开，不然会有循环依赖
+        static const Json jsonnull; //会调用Json()，从而要使用GetDefaultValue().null，所以将Json默认值跟JsonValue默认值分隔开，不然会有循环依赖
         return d;
     }
     //..
-    Json::Json() noexcept                  : m_ptr(GetDefaultJsonValue().null) {}
-    Json::Json(std::nullptr_t) noexcept    : m_ptr(GetDefaultJsonValue().null) {}
-    Json::Json(bool value)                 : m_ptr(value ? GetDefaultJsonValue().t : GetDefaultJsonValue().f) {}
     //operator[]
     const Json & Json::operator[] (size_t i)          const { return (*m_ptr)[i];           }
     const Json & Json::operator[] (const string &key) const { return (*m_ptr)[key];         }
@@ -77,7 +74,8 @@
 
 ## 比较的实现
 
-因为在Json类的实例对象中，没法直接调用成员变量m_ptr的成员m_value，所以在value类中再实现成员函数equals和less。
+因为在Json类的实例对象中，没法直接调用成员变量m_ptr的成员m_value，所以在Value类中再实现成员函数equals和less。
+
 ~~~cpp
 
     template <JsonType tag, typename T>
@@ -102,15 +100,15 @@
             return false;
         
         //没法直接return m_ptr->m_value == rhs.m_value;
-        return m_ptr->equals(rhs.m_ptr->get())
+        return m_ptr->equals(rhs.m_ptr->get());
     }
 
     bool Json::operator<  (const Json &rhs) const
     {
         if (m_ptr == rhs.m_ptr)
             return false;
-        if (m_ptr->type() != rhs.m_ptr->type())
-            return m_ptr->type() < rhs.m_ptr->type();
+        if (m_ptr->Type() != rhs.m_ptr->Type())
+            return m_ptr->Type() < rhs.m_ptr->Type();
 
         return m_ptr->less(rhs.m_ptr.get());
     }
@@ -129,4 +127,36 @@
             bool operator>= (const Json &rhs) const { return !(*this < rhs); }
         //..
     }
+~~~
+
+目前为止，我们已经将需要在代码中使用的json数据结构搭建的差不多了，可能还差一些各式各样的对应的构造函数
+
+~~~cpp
+    //..
+    //Constructors
+    //因为设置了一个JSON类型为NULL的局部静态变量，所以这里可以实现没有入参的或者入参为空值的Json构造函数
+    Json::Json() noexcept                : m_ptr(GetDefaultValue().null) {}
+    Json::Json(std::nullptr_t) noexcept  : m_ptr(GetDefaultValue().null) {}
+    Json::Json(double value)             : m_ptr(std::make_shared<JsonNumber>(value)) {}
+    Json::Json(bool value)               : m_ptr(value ? GetDefaultValue().t : GetDefaultValue().f) {}
+    Json::Json(const std::string &value) : m_ptr(std::make_shared<JsonString>(value)) {}
+    Json::Json(std::string &&value)      : m_ptr(std::make_shared<JsonString>(move(value))) {}
+    Json::Json(const char * value)       : m_ptr(std::make_shared<JsonString>(value)) {}
+    Json::Json(const array &values)      : m_ptr(std::make_shared<JsonArray>(values)) {}
+    Json::Json(array &&values)           : m_ptr(std::make_shared<JsonArray>(move(values))) {}
+    Json::Json(const object &values)     : m_ptr(std::make_shared<JsonObject>(values)) {}
+    Json::Json(object &&values)          : m_ptr(std::make_shared<JsonObject>(move(values))) {}
+    //Constructors
+    //..
+~~~
+最后还可以加上一些用于判断类型的函数
+~~~cpp
+    //..
+    bool is_null()   const { return Type() == JsonType::NUL; }
+    bool is_number() const { return Type() == JsonType::NUMBER; }
+    bool is_bool()   const { return Type() == JsonType::BOOL; }
+    bool is_string() const { return Type() == JsonType::STRING; }
+    bool is_array()  const { return Type() == JsonType::ARRAY; }
+    bool is_object() const { return Type() == JsonType::OBJECT; }
+    //..
 ~~~
