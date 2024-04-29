@@ -7,6 +7,8 @@ namespace ghjson
     {
         public:            
             virtual JsonType Type() const = 0;
+            virtual bool equals(const JsonValue * other) const = 0;
+            virtual bool less(const JsonValue * other) const = 0;
             
             virtual double              GetNumber() const;
             virtual bool                GetBool() const;
@@ -194,5 +196,6 @@ namespace ghjson
     Json::Json(const array &values)      : m_ptr(std::make_shared<JsonArray>(values)) {}
     Json::Json(array &&values)           : m_ptr(std::make_shared<JsonArray>(move(values))) {}
     Json::Json(const object &values)     : m_ptr(std::make_shared<JsonObject>(values)) {}
-    Json::Json(object &&values)          : m_ptr(std::make_shared<JsonObject>(move(values))) {}    //Construtor
+    Json::Json(object &&values)          : m_ptr(std::make_shared<JsonObject>(move(values))) {}
+    //Construtor
 }
