@@ -185,7 +185,7 @@ namespace ghjson
     }
     //Comparisons
 
-    //Construtor
+    //Json Construtor
     Json::Json() noexcept                : m_ptr(GetDefaultValue().null) {}
     Json::Json(std::nullptr_t) noexcept  : m_ptr(GetDefaultValue().null) {}
     Json::Json(double value)             : m_ptr(std::make_shared<JsonNumber>(value)) {}
@@ -197,5 +197,28 @@ namespace ghjson
     Json::Json(array &&values)           : m_ptr(std::make_shared<JsonArray>(move(values))) {}
     Json::Json(const object &values)     : m_ptr(std::make_shared<JsonObject>(values)) {}
     Json::Json(object &&values)          : m_ptr(std::make_shared<JsonObject>(move(values))) {}
-    //Construtor
+    //Json Construtor
+
+    //parser
+    class Parser
+    {
+        public:
+            const std::string &in;
+            size_t i;
+            std::string &err;
+            Parser(const std::string &in, size_t i, std::string &err):in(in), i(i), err(err){}
+
+            Json ParseJson();
+            Json ParseBool();
+            Json ParseNumber();
+            Json ParseString();
+            Json ParseArray();
+            Json ParseObject();
+    };
+    
+    Json Parser::ParseJson()
+    {
+
+    }
+    //parser
 }
