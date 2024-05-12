@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <memory>
+#include <cassert>
 
 namespace ghjson
 {

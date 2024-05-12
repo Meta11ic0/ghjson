@@ -203,71 +203,79 @@ namespace ghjson
     class Parser
     {
         public:
-            const std::string &in;
-            size_t i;
+            const std::string &str;
+            size_t idx;
             std::string &err;
-            Parser(const std::string &in, size_t i, std::string &err):in(in), i(i), err(err){}
+            bool status;
+            Parser(const std::string &str, size_t idx, std::string &err):str(str), idx(idx), err(err),status(true){}
 
-            char GetNextToken();
             void ParseWhitespace();
             Json Expect(const std::string &expected, Json res);
-            Json Fail();
-            
+            char Parser::GetNextToken();
+
             Json ParseJson();
-            Json ParseBool();
             Json ParseNumber();
             Json ParseString();
             Json ParseArray();
             Json ParseObject();
     };
 
-    char Parser::GetNextToken() 
-    {
-        ParseWhitespace();
-        if (i == in.size())
-            return Fail("unexpected end of input", static_cast<char>(0));
-        return in[i++];
-    }
-
     void Parser::ParseWhitespace()
     {
-        while (in[i] == ' ' || in[i] == '\r' || in[i] == '\n' || in[i] == '\t')
-            i++;
+        while (str[idx] == ' ' || str[idx] == '\r' || str[idx] == '\n' || str[idx] == '\t')
+            idx++;
     }
 
     Json Parser::Expect(const std::string &expected, Json res) 
     {
-        i--;
-        if (in.compare(i, expected.length(), expected) == 0) 
+        assert(idx != 0);
+        idx--;
+        if(str.compare(idx, expected.length(), expected) == 0)
         {
-            i += expected.length();
+            idx += expected.length();
             return res;
-        } 
-        else 
+        }
+        else
         {
-            return Fail("parse error: expected " + expected + ", got " + in.substr(i, expected.length()));
+            err = "[ERROR]:Expect (" + expected + "), got ()" + str.substr(idx, expected.length()) + ")";
+            status = false;
+            return GetJsonNull();
         }
     }
 
-    Json Parser::Fail()
-    {
-        
-    }
 
-    Json Parser::ParseJson()
+    char Parser::GetNextToken()
     {
         ParseWhitespace();
-        if(in[i] == 't')
+        if(idx == str.size())
         {
-            return 
+            err = "Unexpected end";
+            status = false;
+            return static_cast<char>(0);
         }
-        else if(in[i] == 'f')
+        else
         {
-
+            return str[idx++];
         }
-        else if(in[i] == 'n')
+    }
+    Json Parser::ParseJson()
+    {
+        char ch = GetNextToken();
+        if(ch == 't')
         {
-
+            return Expect("true", Json(true));
+        }
+        else if (ch == 'f')
+        {
+            return Expect("false", Json(false));
+        }
+        else if(ch == 'n')
+        {
+            return Expect("null", GetJsonNull());
+        }
+        else
+        {
+            return GetJsonNull();
         }
     }
     //parser
