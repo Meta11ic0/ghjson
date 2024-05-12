@@ -260,8 +260,6 @@ namespace ghjson
         }
     }
 
-    Json Parser::ParseNumber()
-
     Json Parser::ParseJson()
     {
         char ch = GetNextToken();
