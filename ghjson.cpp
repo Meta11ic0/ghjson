@@ -210,14 +210,14 @@ namespace ghjson
             Parser(const std::string &str, size_t idx, std::string &err):str(str), idx(idx), err(err),status(true){}
 
             void ParseWhitespace();
-            Json Expect(const std::string &expected, Json res);
             char Parser::GetNextToken();
 
-            Json ParseJson();
+            Json Parse_Literal(const std::string &literal, Json target);
             Json ParseNumber();
             Json ParseString();
             Json ParseArray();
             Json ParseObject();
+            Json ParseJson();
     };
 
     void Parser::ParseWhitespace()
@@ -225,24 +225,6 @@ namespace ghjson
         while (str[idx] == ' ' || str[idx] == '\r' || str[idx] == '\n' || str[idx] == '\t')
             idx++;
     }
-
-    Json Parser::Expect(const std::string &expected, Json res) 
-    {
-        assert(idx != 0);
-        idx--;
-        if(str.compare(idx, expected.length(), expected) == 0)
-        {
-            idx += expected.length();
-            return res;
-        }
-        else
-        {
-            err = "[ERROR]:Expect (" + expected + "), got ()" + str.substr(idx, expected.length()) + ")";
-            status = false;
-            return GetJsonNull();
-        }
-    }
-
 
     char Parser::GetNextToken()
     {
@@ -258,20 +240,42 @@ namespace ghjson
             return str[idx++];
         }
     }
+
+    Json Parser::Parse_Literal(const std::string &literal, Json target) 
+    {
+        //按道理进来之后是不可能有idx == 0 的情况，但json11中加了这个检测
+        //其实按道理在数组下标的使用中，保证索引在范围内是正常操作
+        assert(idx != 0);
+        idx--;
+        if(str.compare(idx, literal.length(), literal) == 0)
+        {
+            idx += literal.length();
+            return target;
+        }
+        else
+        {
+            err = "[ERROR]:Parse_Literal (" + literal + "), got ()" + str.substr(idx, literal.length()) + ")";
+            status = false;
+            return GetJsonNull();
+        }
+    }
+
+    Json Parser::ParseNumber()
+
     Json Parser::ParseJson()
     {
         char ch = GetNextToken();
         if(ch == 't')
         {
-            return Expect("true", Json(true));
+            return Parse_Literal("true", Json(true));
         }
         else if (ch == 'f')
         {
-            return Expect("false", Json(false));
+            return Parse_Literal("false", Json(false));
         }
         else if(ch == 'n')
         {
-            return Expect("null", GetJsonNull());
+            return Parse_Literal("null", GetJsonNull());
         }
         else
         {
