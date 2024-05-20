@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <cassert>
+#include <stdexcept>
 
 namespace ghjson
 {
@@ -66,7 +67,20 @@ namespace ghjson
             bool operator>= (const Json &rhs) const { return !(*this < rhs); }
             //Comparisons
 
+            //dump
+            void dump(std::string &out) const;
+            //dump
         private:
             std::shared_ptr<JsonValue> m_ptr;
     };
+
+    class JsonParseException : public std::runtime_error 
+    {
+        public:
+            JsonParseException(const std::string& message, size_t position): std::runtime_error(message), pos(position) {}
+            size_t GetPosition() const { return pos; }
+        private:
+            size_t pos;
+    };
+    Json Parse(const std::string & in);
 }

@@ -9,6 +9,7 @@ namespace ghjson
             virtual JsonType Type() const = 0;
             virtual bool equals(const JsonValue * other) const = 0;
             virtual bool less(const JsonValue * other) const = 0;
+            virtual void dump(std::string &out) const = 0;
             
             virtual double              GetNumber() const;
             virtual bool                GetBool() const;
@@ -27,26 +28,29 @@ namespace ghjson
     {
         protected:
             explicit Value(const T &value) : m_value(value) {}
-            explicit Value(T &&value)      : m_value(move(value)) {}
+            explicit Value(T &&value)      : m_value(std::move(value)) {}
 
             JsonType Type() const override { return tag; }
             const T m_value;
 
-            // Comparisons
+            void dump(std::string &out) const;
+
+            //Comparisons
             bool equals(const JsonValue * other) const {
                 return m_value == static_cast<const Value<tag, T> *>(other)->m_value;
             }
             bool less(const JsonValue * other) const {
                 return m_value < static_cast<const Value<tag, T> *>(other)->m_value;
             }
+            //Comparisons
 
     };
 
     class NullClass
     {
     public:
-        bool operator == (NullClass) { return true; }
-        bool operator < (NullClass) { return false; }
+        bool operator == (NullClass) const { return true; }
+        bool operator < (NullClass) const { return false; }
     };
 
     class JsonNull final : public Value<JsonType::NUL, NullClass>
@@ -199,86 +203,182 @@ namespace ghjson
     Json::Json(object &&values)          : m_ptr(std::make_shared<JsonObject>(move(values))) {}
     //Json Construtor
 
-    //parser
-    class Parser
+    //parse
+    Json ParseString(const std::string & str, size_t & idx) 
     {
-        public:
-            const std::string &str;
-            size_t idx;
-            std::string &err;
-            bool status;
-            Parser(const std::string &str, size_t idx, std::string &err):str(str), idx(idx), err(err),status(true){}
-
-            void ParseWhitespace();
-            char Parser::GetNextToken();
-
-            Json Parse_Literal(const std::string &literal, Json target);
-            Json ParseNumber();
-            Json ParseString();
-            Json ParseArray();
-            Json ParseObject();
-            Json ParseJson();
-    };
-
-    void Parser::ParseWhitespace()
-    {
-        while (str[idx] == ' ' || str[idx] == '\r' || str[idx] == '\n' || str[idx] == '\t')
-            idx++;
     }
 
-    char Parser::GetNextToken()
+    bool InRange(long x, long lower, long upper)
     {
-        ParseWhitespace();
-        if(idx == str.size())
+        return (x >= lower && x <= upper);
+    }
+
+    Json ParseNumber(const std::string & str, size_t & idx)
+    {
+
+        size_t start = idx;
+        size_t len = str.length();
+        
+        if(str[idx] == '-')
         {
-            err = "Unexpected end";
-            status = false;
-            return static_cast<char>(0);
+            idx++;
+        }
+
+        if(idx < len && str[idx] == '0')
+        {
+            idx++;
+        }
+        else if(idx < len && InRange(str[idx], '1', '9'))
+        {
+            idx++;
+            while(idx < len && InRange(str[idx], '0', '9'))
+            {
+                idx++;
+            }
         }
         else
         {
-            return str[idx++];
+            throw JsonParseException("[ERROR]:wrong number format", idx);
         }
+
+        if(idx < len && str[idx] == '.')
+        {
+            idx++;
+            if(idx < len && InRange(str[idx], '0', '9'))
+            {
+                idx++;
+            }
+            else
+            {
+                throw JsonParseException("[ERROR]:wrong number format", idx);
+            }
+            
+            while(idx < len && InRange(str[idx], '0', '9'))
+            {
+                idx++;
+            }
+        }
+        
+        if(idx < len && (str[idx] == 'e' || str[idx] == 'E'))
+        {
+            idx++;
+            if(idx < len && (str[idx] == '+' || str[idx] == '-'))
+            {
+                idx++;
+            }
+
+            if(idx < len && InRange(str[idx], '0', '9'))
+            {
+                idx++;
+            }
+            else
+            {
+                throw JsonParseException("[ERROR]:wrong number format", idx);
+            }
+
+            while(idx < len && InRange(str[idx], '0', '9'))
+            {
+                idx++;
+            }
+        }
+
+        return Json(std::strtod(str.c_str() + start, nullptr));
     }
 
-    Json Parser::Parse_Literal(const std::string &literal, Json target) 
+    Json ParseLiteral(const std::string &literal, Json target, const std::string & str, size_t & idx) 
     {
-        //按道理进来之后是不可能有idx == 0 的情况，但json11中加了这个检测
-        //其实按道理在数组下标的使用中，保证索引在范围内是正常操作
-        assert(idx != 0);
-        idx--;
         if(str.compare(idx, literal.length(), literal) == 0)
         {
             idx += literal.length();
             return target;
         }
-        else
-        {
-            err = "[ERROR]:Parse_Literal (" + literal + "), got ()" + str.substr(idx, literal.length()) + ")";
-            status = false;
-            return GetJsonNull();
-        }
+        throw JsonParseException("[ERROR]:expected (" + literal + "), got (" + str.substr(idx, literal.length()) + ")", idx);
     }
 
-    Json Parser::ParseJson()
+    void ParseWhitespace(const std::string & str, size_t & idx)
     {
-        char ch = GetNextToken();
-        if(ch == 't')
+        while (str[idx] == ' ' || str[idx] == '\r' || str[idx] == '\n' || str[idx] == '\t')
+            idx++;
+    }
+
+    Json ParseJson(const std::string & str, size_t & idx)
+    {
+        ParseWhitespace(str, idx);
+
+        if(idx == str.size())
         {
-            return Parse_Literal("true", Json(true));
+            throw JsonParseException("Unexpected end", idx);
         }
-        else if (ch == 'f')
+
+        if(str[idx] == 'n')
         {
-            return Parse_Literal("false", Json(false));
+            return ParseLiteral("null", GetJsonNull(), str, idx);
         }
-        else if(ch == 'n')
+        else if(str[idx] == 't')
         {
-            return Parse_Literal("null", GetJsonNull());
+            return ParseLiteral("true", Json(true), str, idx);
+        }
+        else if(str[idx] == 'f')
+        {
+            return ParseLiteral("false", Json(false), str, idx);
+        }
+        else if(str[idx] == '\"')
+        {
+            return ParseString(str, idx);
         }
         else
         {
-            return GetJsonNull();
+            return ParseNumber(str, idx);
         }
     }
+    
+    Json Parse(const std::string & in)
+    {
+        size_t idx = 0;
+        return ParseJson(in, idx);
+    }
     //parser
+
+    //dump
+    void Json::dump(std::string &out) const
+    {
+        m_ptr->dump(out);
+    }
+    //JsonNull
+    template<>
+    void Value<JsonType::NUL, NullClass>::dump(std::string &out) const 
+    {
+        out += "null";
+    }
+    //JsonBool
+    template<>
+    void Value<JsonType::BOOL, bool>::dump(std::string &out) const 
+    {
+        out += (m_value ? "true" : "false");
+    }
+    //JsonNumber
+    template<>
+    void Value<JsonType::NUMBER, double>::dump(std::string &out) const 
+    {
+        out += std::to_string(m_value);
+    }
+    //JsonString
+    template<>
+    void Value<JsonType::STRING, std::string>::dump(std::string &out) const 
+    {
+        out += m_value;
+    }
+    //JsonArray
+    template<>
+    void Value<JsonType::ARRAY, array>::dump(std::string &out) const 
+    {
+        out += ("not finish");
+    }
+    //JsonObject
+    template<>
+    void Value<JsonType::OBJECT, object>::dump(std::string &out) const 
+    {
+        out += ("not finish");
+    }
+    //dump
 }
