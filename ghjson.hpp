@@ -7,6 +7,13 @@
 #include <cassert>
 #include <stdexcept>
 
+#define DEBUG 
+#ifdef DEBUG
+#include <iostream>
+using namespace std;
+#endif
+
+
 namespace ghjson
 {
     class Json;

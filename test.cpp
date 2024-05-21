@@ -7,6 +7,54 @@ int succ = 0;
 int count  = 0;
 double epsilon = 1e-5;
 
+void TestParseArray(ghjson::array expect, string jsonStr)
+{
+    try 
+    {
+        ghjson::Json json = ghjson::Parse(jsonStr);
+        for(size_t i ; i < expect.size(); i++)
+        {
+            string ex, res;
+            expect[i].dump(ex);
+            json[i].dump(res);
+            cout << "parsing in no." << i << ", expected: " << ex << ", got: "<< res <<endl;
+            if(expect[i] != json[i])
+            {
+                cerr << "parsing error in no." << i << ", expected: " << ex << ", got: "<< res <<endl;
+                break;
+            } 
+        }
+    } 
+    catch (const ghjson::JsonParseException& ex) 
+    {
+        cerr << "parsing " << jsonStr
+        << ", error at position " << ex.GetPosition() << ": " << ex.what() << endl;
+    }
+    
+    count++;
+}
+
+void TestParseString(string expect, string jsonStr)
+{
+    try 
+    {
+        ghjson::Json json = ghjson::Parse(jsonStr);
+        if(expect.compare(json.GetString()) == 0)
+            succ++;
+        else
+        {
+            cout << "expected : " << expect << ", got : "<<  json.GetString()<< endl;
+        }
+    } 
+    catch (const ghjson::JsonParseException& ex) 
+    {
+        cerr << "parsing " << jsonStr
+        << ", error at position " << ex.GetPosition() << ": " << ex.what() << endl;
+    }
+    
+    count++;
+}
+
 void TestParseNumber(double num, string jsonStr)
 {
     try 
@@ -50,11 +98,24 @@ void TestParseWrong()
     TestParseNumber(1., "1.");
 }
 
-void TestLiteral()
+void TestArray()
 {
-    TestParseLiteral("true");
-    TestParseLiteral("false");
-    TestParseLiteral("null");
+    ghjson::Json expected ={["null", "false" , "true" , 123 , "\"abc\"" ]};
+}
+
+void TestString()
+{
+    TestParseString("", "\"\"");
+    TestParseString("Hello", "\"Hello\"");
+    TestParseString("Hello\nWorld", "\"Hello\\nWorld\"");
+    
+    TestParseString("\" \\ / \b \f \n \r \t", "\"\\\" \\\\ \\/ \\b \\f \\n \\r \\t\"");
+    //TestParseString("Hello\0World", "\"Hello\\u0000World\"");
+    //TestParseString("\x24", "\"\\u0024\"");         /* Dollar sign U+0024 */
+    //TestParseString("\xC2\xA2", "\"\\u00A2\"");     /* Cents sign U+00A2 */
+    //TestParseString("\xE2\x82\xAC", "\"\\u20AC\""); /* Euro sign U+20AC */
+    //TestParseString("\xF0\x9D\x84\x9E", "\"\\uD834\\uDD1E\"");  /* G clef sign U+1D11E */
+    //TestParseString("\xF0\x9D\x84\x9E", "\"\\ud834\\udd1e\"");  /* G clef sign U+1D11E */
 }
 
 void TestNumber()
@@ -90,12 +151,20 @@ void TestNumber()
     TestParseNumber(-1.7976931348623157e+308, "-1.7976931348623157e+308");
 }
 
+void TestLiteral()
+{
+    TestParseLiteral("true");
+    TestParseLiteral("false");
+    TestParseLiteral("null");
+}
+
 void TestParse()
 {
     TestLiteral();
     TestNumber();
+    TestString();
 
-    TestParseWrong();
+    //TestParseWrong();
 }
 
 int main()

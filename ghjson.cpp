@@ -204,8 +204,73 @@ namespace ghjson
     //Json Construtor
 
     //parse
+    Json ParseArray(const std::string & str, size_t & idx) 
+    {
+        array out;
+        idx++;
+
+        CheckIndex(str, idx);
+
+        if(str[idx] == ']')
+            return Json(out);
+
+        while(1)
+        {
+            try
+            {
+                out.push_back(ParseJson(str, idx));
+            }
+            catch(const JsonParseException& ex)
+            {
+                JsonParseException("[ERROR]: array parse worng, " + std::string(ex.what()) , idx);
+            }
+            ParseWhitespace(str, idx);
+            CheckIndex(str, idx);
+
+            if(str[idx] == ']')
+                break;
+            if(str[idx] != ',')
+                throw JsonParseException("[ERROR]: array format worng, ", idx);
+            idx++;
+        }
+        idx++;
+        return Json(out);
+    }
+
     Json ParseString(const std::string & str, size_t & idx) 
     {
+        std::string out;
+        idx++;
+        while(1)
+        {
+            if(idx == str.size())
+            {
+                throw JsonParseException("Unexpected end", idx);
+            }
+            if(str[idx] == '\"')
+                return Json(out);
+            else if(str[idx] == '\\')
+            {
+                idx++;
+                switch(str[idx])
+                {
+                    case '\"':  out+='\"'; break;
+                    case '\\':  out+='\\'; break;
+                    case '/' :  out+='/' ; break;
+                    case 'b' :  out+='\b'; break;
+                    case 'f' :  out+='\f'; break;
+                    case 'n' :  out+='\n'; break;
+                    case 'r' :  out+='\r'; break;
+                    case 't' :  out+='\t'; break;
+                    default : throw JsonParseException("unknow sequence:" + std::string(1, str[idx-1]) + std::string(1, str[idx]), idx);
+                }
+            }
+            else
+            {
+                out+=str[idx];
+            }
+            idx++;
+        }
     }
 
     bool InRange(long x, long lower, long upper)
@@ -295,20 +360,24 @@ namespace ghjson
         throw JsonParseException("[ERROR]:expected (" + literal + "), got (" + str.substr(idx, literal.length()) + ")", idx);
     }
 
-    void ParseWhitespace(const std::string & str, size_t & idx)
+    void CheckIndex(const std::string& str, size_t idx) 
     {
-        while (str[idx] == ' ' || str[idx] == '\r' || str[idx] == '\n' || str[idx] == '\t')
+        if (idx >= str.size()) 
+        {
+            throw JsonParseException("Unexpected end", idx);
+        }
+    }
+
+    void ParseWhitespace(const std::string& str, size_t& idx)
+    {
+        while (idx < str.size() && (str[idx] == ' ' || str[idx] == '\r' || str[idx] == '\n' || str[idx] == '\t'))
             idx++;
     }
 
     Json ParseJson(const std::string & str, size_t & idx)
     {
         ParseWhitespace(str, idx);
-
-        if(idx == str.size())
-        {
-            throw JsonParseException("Unexpected end", idx);
-        }
+        CheckIndex(str, idx);
 
         if(str[idx] == 'n')
         {
@@ -326,6 +395,10 @@ namespace ghjson
         {
             return ParseString(str, idx);
         }
+        else if(str[idx] == '[')
+        {
+            return ParseArray(str, idx);
+        }
         else
         {
             return ParseNumber(str, idx);
@@ -337,7 +410,7 @@ namespace ghjson
         size_t idx = 0;
         return ParseJson(in, idx);
     }
-    //parser
+    //parse
 
     //dump
     void Json::dump(std::string &out) const
