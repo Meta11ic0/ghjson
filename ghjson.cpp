@@ -59,6 +59,7 @@ namespace ghjson
             JsonNull() : Value({}) {};
     };
 
+
     class JsonNumber final : public Value<JsonType::NUMBER, double>
     {
         public:
@@ -192,6 +193,7 @@ namespace ghjson
     //Json Construtor
     Json::Json() noexcept                : m_ptr(GetDefaultValue().null) {}
     Json::Json(std::nullptr_t) noexcept  : m_ptr(GetDefaultValue().null) {}
+    Json::Json(int value)                : m_ptr(std::make_shared<JsonNumber>(value)) {}
     Json::Json(double value)             : m_ptr(std::make_shared<JsonNumber>(value)) {}
     Json::Json(bool value)               : m_ptr(value ? GetDefaultValue().t : GetDefaultValue().f) {}
     Json::Json(const std::string &value) : m_ptr(std::make_shared<JsonString>(value)) {}
@@ -204,13 +206,81 @@ namespace ghjson
     //Json Construtor
 
     //parse
+    void CheckIndex(const std::string& str, size_t idx) 
+    {
+        if (idx >= str.size()) 
+        {
+            throw JsonParseException("Unexpected end", idx);
+        }
+    }
+
+    //提前声明为了调用
+    Json ParseJson(const std::string & str, size_t & idx);
+    Json ParseString(const std::string & str, size_t & idx);
+    
+    void ParseWhitespace(const std::string& str, size_t & idx)
+    {
+        while (idx < str.size() && (str[idx] == ' ' || str[idx] == '\r' || str[idx] == '\n' || str[idx] == '\t'))
+            idx++;
+    }
+
+    Json ParseObject(const std::string & str, size_t & idx) 
+    {
+        object out;
+
+        ParseWhitespace(str, idx);
+        CheckIndex(str, idx);
+
+        if(str[idx] == '}')
+            return Json(out);
+
+        while(1)
+        {
+            try
+            {
+                ParseWhitespace(str, idx);
+                CheckIndex(str, idx);
+
+                cout << "first str[idx]: " << str[idx]<<endl;
+                std::string key = ParseString(str, idx).GetString();
+                cout << "key: " <<key <<endl;
+
+                ParseWhitespace(str, idx);
+                CheckIndex(str, idx);
+                
+                if(str[idx]!=':')
+                    throw JsonParseException("[ERROR]: object parsing, expect':', got " + str[idx], idx);
+                idx++;
+                
+                ParseWhitespace(str, idx);
+                CheckIndex(str, idx);
+                Json value  = ParseJson(str, idx);
+                cout << "value: " <<value.dump() <<endl;
+                cout << "str[idx]: " << str[idx]<<endl;
+                out.insert(pair<std::string, Json>(key, value));
+            }
+            catch(const JsonParseException& ex)
+            {
+                JsonParseException("[ERROR]: object parse worng, " + std::string(ex.what()) , idx);
+            }
+            ParseWhitespace(str, idx);
+            CheckIndex(str, idx);
+            cout << "last str[idx]: " << str[idx]<<endl;
+            if(str[idx] == '}')
+                break;
+            if(str[idx] != ',')
+                throw JsonParseException("[ERROR]: object format worng, ", idx);
+            idx++;
+        }
+        idx++;
+        return Json(out);
+    }
+
     Json ParseArray(const std::string & str, size_t & idx) 
     {
         array out;
-        idx++;
-
+        ParseWhitespace(str, idx);
         CheckIndex(str, idx);
-
         if(str[idx] == ']')
             return Json(out);
 
@@ -218,7 +288,8 @@ namespace ghjson
         {
             try
             {
-                out.push_back(ParseJson(str, idx));
+                Json test = ParseJson(str, idx);
+                out.push_back(test);
             }
             catch(const JsonParseException& ex)
             {
@@ -226,7 +297,6 @@ namespace ghjson
             }
             ParseWhitespace(str, idx);
             CheckIndex(str, idx);
-
             if(str[idx] == ']')
                 break;
             if(str[idx] != ',')
@@ -248,7 +318,7 @@ namespace ghjson
                 throw JsonParseException("Unexpected end", idx);
             }
             if(str[idx] == '\"')
-                return Json(out);
+                break;
             else if(str[idx] == '\\')
             {
                 idx++;
@@ -271,6 +341,8 @@ namespace ghjson
             }
             idx++;
         }
+        idx++;
+        return Json(out);
     }
 
     bool InRange(long x, long lower, long upper)
@@ -360,20 +432,6 @@ namespace ghjson
         throw JsonParseException("[ERROR]:expected (" + literal + "), got (" + str.substr(idx, literal.length()) + ")", idx);
     }
 
-    void CheckIndex(const std::string& str, size_t idx) 
-    {
-        if (idx >= str.size()) 
-        {
-            throw JsonParseException("Unexpected end", idx);
-        }
-    }
-
-    void ParseWhitespace(const std::string& str, size_t& idx)
-    {
-        while (idx < str.size() && (str[idx] == ' ' || str[idx] == '\r' || str[idx] == '\n' || str[idx] == '\t'))
-            idx++;
-    }
-
     Json ParseJson(const std::string & str, size_t & idx)
     {
         ParseWhitespace(str, idx);
@@ -397,7 +455,11 @@ namespace ghjson
         }
         else if(str[idx] == '[')
         {
-            return ParseArray(str, idx);
+            return ParseArray(str, ++idx);
+        }
+        else if(str[idx] == '{')
+        {
+            return ParseObject(str, ++idx);
         }
         else
         {
@@ -439,19 +501,32 @@ namespace ghjson
     template<>
     void Value<JsonType::STRING, std::string>::dump(std::string &out) const 
     {
-        out += m_value;
+        out += "\"" + m_value + "\"";
     }
     //JsonArray
     template<>
     void Value<JsonType::ARRAY, array>::dump(std::string &out) const 
     {
-        out += ("not finish");
+        out+='[';
+        for(size_t i = 0 ; i < m_value.size(); i++)
+        {
+            m_value[i].dump(out);
+            if(i != m_value.size() - 1)
+                out+=", ";
+        }
+        out+=']';
     }
     //JsonObject
     template<>
     void Value<JsonType::OBJECT, object>::dump(std::string &out) const 
     {
-        out += ("not finish");
+        out+="{\n";
+        for(auto iter = m_value.begin() ; iter != m_value.end(); iter++)
+        {
+            out+= '\t' + iter->first + std::string(" : ") + iter->second.dump() + ", \n";
+            
+        }
+        out+='}';
     }
     //dump
 }

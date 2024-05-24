@@ -33,6 +33,7 @@ namespace ghjson
             //Constructor
             Json() noexcept;                // NUL
             Json(std::nullptr_t) noexcept;  // NUL
+            Json(int value);             // NUMBER
             Json(double value);             // NUMBER
             Json(bool value);               // BOOL
             Json(const std::string &value); // STRING
@@ -76,6 +77,12 @@ namespace ghjson
 
             //dump
             void dump(std::string &out) const;
+            std::string dump() const
+            {
+                std::string str;
+                dump(str);
+                return str;
+            }
             //dump
         private:
             std::shared_ptr<JsonValue> m_ptr;
@@ -89,5 +96,7 @@ namespace ghjson
         private:
             size_t pos;
     };
+    
     Json Parse(const std::string & in);
+    
 }

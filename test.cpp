@@ -7,12 +7,43 @@ int succ = 0;
 int count  = 0;
 double epsilon = 1e-5;
 
+void TestParseObject(ghjson::object expect, string jsonStr)
+{
+    cout << __func__<<endl;
+    try 
+    {
+        ghjson::Json json = ghjson::Parse(jsonStr);
+        for(auto &item : expect)
+        {
+            string key  = item.first;
+            ghjson::Json value = item.second;
+            cout << "expect key: " << key << ", value: " << value.dump() << ", got: "<< json[key].dump() <<endl;
+            if(json[key].dump() != value.dump())
+            {
+                cerr << "parsing error , got: "<< json[key].dump() <<endl;
+                break;
+            }
+        }
+        string ss = json.dump();
+        cout << ss << endl;
+        succ++;
+    } 
+    catch (const ghjson::JsonParseException& ex) 
+    {
+        cerr << "parsing " << jsonStr
+        << ", error at position " << ex.GetPosition() << ": " << ex.what() << endl;
+    }
+    
+    count++;
+}
+
 void TestParseArray(ghjson::array expect, string jsonStr)
 {
     try 
     {
         ghjson::Json json = ghjson::Parse(jsonStr);
-        for(size_t i ; i < expect.size(); i++)
+        size_t i = 0;
+        for( ; i < expect.size(); i++)
         {
             string ex, res;
             expect[i].dump(ex);
@@ -22,8 +53,11 @@ void TestParseArray(ghjson::array expect, string jsonStr)
             {
                 cerr << "parsing error in no." << i << ", expected: " << ex << ", got: "<< res <<endl;
                 break;
-            } 
+            }
         }
+        if(i == expect.size())
+            succ++;
+        
     } 
     catch (const ghjson::JsonParseException& ex) 
     {
@@ -43,7 +77,7 @@ void TestParseString(string expect, string jsonStr)
             succ++;
         else
         {
-            cout << "expected : " << expect << ", got : "<<  json.GetString()<< endl;
+            cerr << "expected : " << expect << ", got : "<<  json.GetString()<< endl;
         }
     } 
     catch (const ghjson::JsonParseException& ex) 
@@ -98,9 +132,38 @@ void TestParseWrong()
     TestParseNumber(1., "1.");
 }
 
+void TestObject()
+{
+    cout << __func__<<endl;
+    vector<ghjson::Json> arr;
+    arr.push_back(nullptr);
+    arr.push_back(true);
+    arr.push_back(false);
+    arr.push_back(12321);
+
+    map<string, ghjson::Json> obj;
+    obj.insert(pair<string, ghjson::Json>("key1", "value1" ));
+    obj.insert(pair<string, ghjson::Json>("key2", true ));
+    obj.insert(pair<string, ghjson::Json>("key3", arr ));
+    TestParseObject(obj, "{ \"key1\":\"value1\" , \"key2\": true , \"key3\":[ null , true , false , 12321] }");
+}
+
 void TestArray()
 {
-    ghjson::Json expected ={["null", "false" , "true" , 123 , "\"abc\"" ]};
+    cout << __func__<<endl;
+    vector<ghjson::Json> arr;
+    arr.push_back(nullptr);
+    arr.push_back(true);
+    arr.push_back(false);
+    arr.push_back(12321);
+
+    ghjson::Json a = ghjson::Parse("\"Hello\"");
+    arr.push_back(a);
+    arr.push_back(arr);
+    arr.push_back(arr);
+
+    TestParseArray(arr, "[ null , true , false , 12321 , \"Hello\" ,[ null , true , false , 12321 , \"Hello\" ], [ null , true , false , 12321 , \"Hello\" ,[ null , true , false , 12321 , \"Hello\" ]]]");
+
 }
 
 void TestString()
@@ -160,9 +223,11 @@ void TestLiteral()
 
 void TestParse()
 {
-    TestLiteral();
-    TestNumber();
-    TestString();
+    //TestLiteral();
+    //TestNumber();
+    //TestString();
+    //TestArray();
+    TestObject();
 
     //TestParseWrong();
 }
