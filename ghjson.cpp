@@ -59,7 +59,6 @@ namespace ghjson
             JsonNull() : Value({}) {};
     };
 
-
     class JsonNumber final : public Value<JsonType::NUMBER, double>
     {
         public:
@@ -257,7 +256,7 @@ namespace ghjson
                 Json value  = ParseJson(str, idx);
                 cout << "value: " <<value.dump() <<endl;
                 cout << "str[idx]: " << str[idx]<<endl;
-                out.insert(pair<std::string, Json>(key, value));
+                out.emplace(key, value);
             }
             catch(const JsonParseException& ex)
             {
@@ -289,7 +288,7 @@ namespace ghjson
             try
             {
                 Json test = ParseJson(str, idx);
-                out.push_back(test);
+                out.emplace_back(std::move(test));
             }
             catch(const JsonParseException& ex)
             {
@@ -503,30 +502,42 @@ namespace ghjson
     {
         out += "\"" + m_value + "\"";
     }
-    //JsonArray
+    // JsonArray
     template<>
     void Value<JsonType::ARRAY, array>::dump(std::string &out) const 
     {
-        out+='[';
-        for(size_t i = 0 ; i < m_value.size(); i++)
+        out += '[';
+        bool first = true;
+        for (const auto& item : m_value)
         {
-            m_value[i].dump(out);
-            if(i != m_value.size() - 1)
-                out+=", ";
+            if (!first)
+            {
+                out += ",\n";
+            }
+            first = false;
+            item.dump(out);
         }
-        out+=']';
+        out += ']';
     }
-    //JsonObject
+
+    // JsonObject
     template<>
     void Value<JsonType::OBJECT, object>::dump(std::string &out) const 
     {
-        out+="{\n";
-        for(auto iter = m_value.begin() ; iter != m_value.end(); iter++)
+        out += "{\n";
+        bool first = true;
+        for (const auto& item : m_value)
         {
-            out+= '\t' + iter->first + std::string(" : ") + iter->second.dump() + ", \n";
-            
+            if (!first)
+            {
+                out += ",\n";
+            }
+            first = false;
+            out += '\t' + item.first + " : ";
+            item.second.dump(out);
         }
-        out+='}';
+        out += "\n}";
     }
+
     //dump
 }
