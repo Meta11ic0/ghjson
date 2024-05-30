@@ -7,18 +7,29 @@ namespace ghjson
     {
         public:            
             virtual JsonType Type() const = 0;
+
             virtual bool equals(const JsonValue * other) const = 0;
-            virtual bool less(const JsonValue * other) const = 0;
-            virtual void dump(std::string &out) const = 0;
+            virtual bool less  (const JsonValue * other) const = 0;
+
+            virtual void Dump(std::string &out) const = 0;
             
             virtual double              GetNumber() const;
-            virtual bool                GetBool() const;
+            virtual bool                GetBool  () const;
             virtual const std::string & GetString() const;
-            virtual const array &       GetArray() const;
+            virtual const array &       GetArray () const;
             virtual const object &      GetObject() const;
 
             virtual const Json& operator[](size_t i) const;
             virtual const Json& operator[](const std::string& key) const;
+
+            virtual void SetNumber (double               value);
+            virtual void SetBool   (bool                 value);
+            virtual void SetString (const  std::string & value);
+            virtual void SetArray  (const  array       & value);
+            virtual void SetObject (const  object      & value);
+
+            virtual void AddToArray (const Json & value);
+            virtual void AddToObject(const std::string & key, const Json & value);
 
             virtual ~JsonValue(){};
     };
@@ -31,9 +42,9 @@ namespace ghjson
             explicit Value(T &&value)      : m_value(std::move(value)) {}
 
             JsonType Type() const override { return tag; }
-            const T m_value;
+            T m_value;
 
-            void dump(std::string &out) const;
+            void Dump(std::string &out) const;
 
             //Comparisons
             bool equals(const JsonValue * other) const {
@@ -64,7 +75,8 @@ namespace ghjson
         public:
             explicit JsonNumber(double value) : Value(value) {}
         private:
-            double GetNumber() const override { return m_value; }
+            double GetNumber()             const override { return m_value; }
+            void   SetNumber(double value) override       { m_value = value;}
     };
 
     class JsonBool final : public Value<JsonType::BOOL, bool>
@@ -72,7 +84,8 @@ namespace ghjson
         public:
             explicit JsonBool(bool value) : Value(value) {}
         private:
-            bool GetBool() const override { return m_value; }
+            bool GetBool() const override     { return m_value; }
+            void SetBool(bool value) override { m_value = value;}
     };
 
     class JsonString final : public Value<JsonType::STRING, std::string>
@@ -82,7 +95,7 @@ namespace ghjson
             explicit JsonString(std::string&& value) : Value(move(value)) {}
         private:
             const std::string& GetString() const override { return m_value; }
-
+            void SetString(const std::string& value) override { m_value = value;}
     };
 
     class JsonArray final : public Value<JsonType::ARRAY, array>
@@ -93,6 +106,21 @@ namespace ghjson
         private:
             const array& GetArray() const override { return m_value; }
             const Json& operator[](size_t i) const;
+
+            void SetArray(const array & value) override { m_value = value;}
+            void AddToArray(const Json & value) override { m_value.push_back(value); }
+
+            void RemoveFromArray(size_t index) 
+            {
+                if (index < m_value.size()) 
+                {
+                    m_value.erase(m_value.begin() + index);
+                } 
+                else 
+                {
+                    throw ghJsonException("Index out of bounds", index);
+                }
+            }
     };
 
     class JsonObject final : public Value<JsonType::OBJECT, object>
@@ -103,6 +131,21 @@ namespace ghjson
         private:
             const object& GetObject() const override { return m_value; }
             const Json& operator[](const std::string& key) const;
+
+            void SetObject (const  object      & value) override { m_value = value;}
+            void AddToObject(const std::string & key, const Json & value) override { m_value[key] = value; }
+
+            void RemoveFromObject(const std::string& key) 
+            {
+                if (m_value.find(key) != m_value.end()) 
+                {
+                    m_value.erase(key);
+                } 
+                else 
+                {
+                    throw ghJsonException("Key not found", 0); // 0 as a placeholder
+                }
+            }
     };
     //JsonValue
 
@@ -166,6 +209,26 @@ namespace ghjson
     }
     //GetValue
 
+    //SetValue
+    void Json::SetNumber(double               value) { m_ptr->SetNumber(value); }
+    void Json::SetBool  (bool                 value) { m_ptr->SetBool(value);   }
+    void Json::SetString(const  std::string & value) { m_ptr->SetString(value); }
+    void Json::SetArray (const  array       & value) { m_ptr->SetArray(value);  }
+    void Json::SetObject(const  object      & value) { m_ptr->SetObject(value); }
+
+    void Json::AddToArray (const Json & value)                          { m_ptr->AddToArray(value);       }
+    void Json::AddToObject(const std::string & key, const Json & value) { m_ptr->AddToObject(key, value); }
+
+    void JsonValue::SetNumber(double              value) { throw ghJsonException("Invalid type", 0); }
+    void JsonValue::SetBool  (bool                value) { throw ghJsonException("Invalid type", 0); }
+    void JsonValue::SetString(const std::string & value) { throw ghJsonException("Invalid type", 0); }
+    void JsonValue::SetArray (const array       & value) { throw ghJsonException("Invalid type", 0); }
+    void JsonValue::SetObject(const object      & value) { throw ghJsonException("Invalid type", 0); }
+
+    void JsonValue::AddToArray (const Json & value)                          { throw ghJsonException("Invalid type", 0); }
+    void JsonValue::AddToObject(const std::string & key, const Json & value) { throw ghJsonException("Invalid type", 0); }
+    //SetValue
+
     //Comparisons
     bool Json::operator== (const Json &rhs) const
     {
@@ -202,6 +265,29 @@ namespace ghjson
     Json::Json(array &&values)           : m_ptr(std::make_shared<JsonArray>(move(values))) {}
     Json::Json(const object &values)     : m_ptr(std::make_shared<JsonObject>(values)) {}
     Json::Json(object &&values)          : m_ptr(std::make_shared<JsonObject>(move(values))) {}
+
+    Json::Json(const Json& other) : m_ptr(other.m_ptr) {}
+
+    Json& Json::operator=(const Json& other) 
+    {
+        if (this != &other) 
+        {
+            m_ptr = other.m_ptr;
+        }
+        return *this;
+    }
+
+    Json::Json(Json&& other) noexcept 
+    {
+        swap(other);
+    }
+
+    Json& Json::operator=(Json&& other) noexcept 
+    {
+        swap(other);
+        return *this;
+    }
+
     //Json Constructor
 
     //parse
@@ -240,9 +326,7 @@ namespace ghjson
                 ParseWhitespace(str, idx);
                 CheckIndex(str, idx);
 
-                cout << "first str[idx]: " << str[idx]<<endl;
                 std::string key = ParseString(str, idx).GetString();
-                cout << "key: " <<key <<endl;
 
                 ParseWhitespace(str, idx);
                 CheckIndex(str, idx);
@@ -254,8 +338,6 @@ namespace ghjson
                 ParseWhitespace(str, idx);
                 CheckIndex(str, idx);
                 Json value  = ParseJson(str, idx);
-                cout << "value: " <<value.dump() <<endl;
-                cout << "str[idx]: " << str[idx]<<endl;
                 out.emplace(key, value);
             }
             catch(const ghJsonException& ex)
@@ -264,7 +346,6 @@ namespace ghjson
             }
             ParseWhitespace(str, idx);
             CheckIndex(str, idx);
-            cout << "last str[idx]: " << str[idx]<<endl;
             if(str[idx] == '}')
                 break;
             if(str[idx] != ',')
@@ -473,38 +554,38 @@ namespace ghjson
     }
     //parse
 
-    //dump
-    void Json::dump(std::string &out) const 
+    //Dump
+    void Json::Dump(std::string &out) const 
     { 
-        m_ptr->dump(out);
+        m_ptr->Dump(out);
     }
     //JsonNull
     template<>
-    void Value<JsonType::NUL, NullClass>::dump(std::string &out) const 
+    void Value<JsonType::NUL, NullClass>::Dump(std::string &out) const 
     {
         out += "null";
     }
     //JsonBool
     template<>
-    void Value<JsonType::BOOL, bool>::dump(std::string &out) const 
+    void Value<JsonType::BOOL, bool>::Dump(std::string &out) const 
     {
         out += (m_value ? "true" : "false");
     }
     //JsonNumber
     template<>
-    void Value<JsonType::NUMBER, double>::dump(std::string &out) const 
+    void Value<JsonType::NUMBER, double>::Dump(std::string &out) const 
     {
         out += std::to_string(m_value);
     }
     //JsonString
     template<>
-    void Value<JsonType::STRING, std::string>::dump(std::string &out) const 
+    void Value<JsonType::STRING, std::string>::Dump(std::string &out) const 
     {
         out += "\"" + m_value + "\"";
     }
     // JsonArray
     template<>
-    void Value<JsonType::ARRAY, array>::dump(std::string &out) const 
+    void Value<JsonType::ARRAY, array>::Dump(std::string &out) const 
     {
         out += '[';
         bool first = true;
@@ -515,14 +596,13 @@ namespace ghjson
                 out += ",\n";
             }
             first = false;
-            item.dump(out);
+            item.Dump(out);
         }
         out += ']';
     }
-
     // JsonObject
     template<>
-    void Value<JsonType::OBJECT, object>::dump(std::string &out) const 
+    void Value<JsonType::OBJECT, object>::Dump(std::string &out) const 
     {
         out += "{\n";
         bool first = true;
@@ -534,10 +614,16 @@ namespace ghjson
             }
             first = false;
             out += '\t' + item.first + " : ";
-            item.second.dump(out);
+            item.second.Dump(out);
         }
         out += "\n}";
     }
-    //dump
+    //Dump
 
+    //swap
+    void Json::swap(Json &other) noexcept 
+    { 
+        std::swap(m_ptr, other.m_ptr); 
+    }
+    //swap
 }

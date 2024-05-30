@@ -6,13 +6,7 @@
 #include <memory>
 #include <cassert>
 #include <stdexcept>
-
-#define DEBUG 
-#ifdef DEBUG
-#include <iostream>
-using namespace std;
-#endif
-
+#include <utility>
 
 namespace ghjson
 {
@@ -43,6 +37,10 @@ namespace ghjson
             Json(array &&values);           // ARRAY
             Json(const object &values);     // OBJECT
             Json(object &&values);          // OBJECT
+            Json(const Json & other);
+            Json(Json && other) noexcept;
+            Json& operator=(const Json& other) ;
+            Json& operator=(Json&& other) noexcept;
             //Constructor
 
             //Type
@@ -66,6 +64,25 @@ namespace ghjson
             const Json &        operator[](const std::string &key) const;
             //GetValue
 
+            //SetValue
+            void SetNumber (double               value);
+            inline void SetNumber (int value)
+            {
+                SetNumber(static_cast<double>(value));
+            }
+            void SetBool   (bool                 value);
+            void SetString (const  std::string & value);
+            inline void SetString (const char * value)
+            {
+                SetString(std::string(value));
+            }
+            void SetArray  (const  array       & value);
+            void SetObject (const  object      & value);
+
+            void AddToArray (const Json & value);
+            void AddToObject(const std::string & key, const Json & value);
+            //SetValue
+
             //Comparisons
             bool operator== (const Json &rhs) const;
             bool operator<  (const Json &rhs) const;
@@ -75,16 +92,20 @@ namespace ghjson
             bool operator>= (const Json &rhs) const { return !(*this < rhs); }
             //Comparisons
 
-            //dump
-            void dump(std::string &out) const;
+            //Dump
+            void Dump(std::string &out) const;
 
-            inline std::string dump() const
+            inline std::string Dump() const
             {
                 std::string str;
-                dump(str);
+                Dump(str);
                 return str;
             }
-            //dump
+            //Dump
+
+            //swap
+            void swap(Json &other) noexcept;
+            //swap
         private:
             std::shared_ptr<JsonValue> m_ptr;
     };
@@ -113,7 +134,7 @@ namespace ghjson
     }
 
     // 定义一个将JsonType转换为字符串的函数
-    inline const char* ToString(ghjson::JsonType type)
+    inline const char * ToString(ghjson::JsonType type)
     {
         switch (type) 
         {
@@ -129,7 +150,7 @@ namespace ghjson
 
     inline std::ostream & operator<<(std::ostream & os, ghjson::JsonType tag)
     {
-        return os << ToString(tag);
+        return os << std::string(ToString(tag));
     }
 }
 

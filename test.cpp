@@ -17,14 +17,14 @@ void TestParseObject(ghjson::object expect, const string jsonStr)
         {
             string key  = item.first;
             ghjson::Json value = item.second;
-            cout << "expect key: " << key << ", value: " << value.dump() << ", got: "<< json[key].dump() <<endl;
-            if(json[key].dump() != value.dump())
+            cout << "expect key: " << key << ", value: " << value.Dump() << ", got: "<< json[key].Dump() <<endl;
+            if(json[key].Dump() != value.Dump())
             {
-                cerr << "parsing error , got: "<< json[key].dump() <<endl;
+                cerr << "parsing error , got: "<< json[key].Dump() <<endl;
                 break;
             }
         }
-        string ss = json.dump();
+        string ss = json.Dump();
         cout << ss << endl;
         succ++;
     } 
@@ -46,8 +46,8 @@ void TestParseArray(ghjson::array expect, const string jsonStr)
         for( ; i < expect.size(); i++)
         {
             string ex, res;
-            expect[i].dump(ex);
-            json[i].dump(res);
+            expect[i].Dump(ex);
+            json[i].Dump(res);
             cout << "parsing in no." << i << ", expected: " << ex << ", got: "<< res <<endl;
             if(expect[i] != json[i])
             {
