@@ -7,7 +7,7 @@ int succ = 0;
 int count  = 0;
 double epsilon = 1e-5;
 
-void TestParseObject(ghjson::object expect, string jsonStr)
+void TestParseObject(ghjson::object expect, const string jsonStr)
 {
     cout << __func__<<endl;
     try 
@@ -28,7 +28,7 @@ void TestParseObject(ghjson::object expect, string jsonStr)
         cout << ss << endl;
         succ++;
     } 
-    catch (const ghjson::JsonParseException& ex) 
+    catch (const ghjson::ghJsonException& ex) 
     {
         cerr << "parsing " << jsonStr
         << ", error at position " << ex.GetPosition() << ": " << ex.what() << endl;
@@ -37,7 +37,7 @@ void TestParseObject(ghjson::object expect, string jsonStr)
     count++;
 }
 
-void TestParseArray(ghjson::array expect, string jsonStr)
+void TestParseArray(ghjson::array expect, const string jsonStr)
 {
     try 
     {
@@ -59,7 +59,7 @@ void TestParseArray(ghjson::array expect, string jsonStr)
             succ++;
         
     } 
-    catch (const ghjson::JsonParseException& ex) 
+    catch (const ghjson::ghJsonException& ex) 
     {
         cerr << "parsing " << jsonStr
         << ", error at position " << ex.GetPosition() << ": " << ex.what() << endl;
@@ -68,7 +68,7 @@ void TestParseArray(ghjson::array expect, string jsonStr)
     count++;
 }
 
-void TestParseString(string expect, string jsonStr)
+void TestParseString(string expect, const string jsonStr)
 {
     try 
     {
@@ -80,7 +80,7 @@ void TestParseString(string expect, string jsonStr)
             cerr << "expected : " << expect << ", got : "<<  json.GetString()<< endl;
         }
     } 
-    catch (const ghjson::JsonParseException& ex) 
+    catch (const ghjson::ghJsonException& ex) 
     {
         cerr << "parsing " << jsonStr
         << ", error at position " << ex.GetPosition() << ": " << ex.what() << endl;
@@ -89,7 +89,7 @@ void TestParseString(string expect, string jsonStr)
     count++;
 }
 
-void TestParseNumber(double num, string jsonStr)
+void TestParseNumber(double num, const string jsonStr)
 {
     try 
     {
@@ -101,7 +101,7 @@ void TestParseNumber(double num, string jsonStr)
             cout << "expected : " << num << ", got : "<<  json.GetNumber()<< endl;
         }
     } 
-    catch (const ghjson::JsonParseException& ex) 
+    catch (const ghjson::ghJsonException& ex) 
     {
         cerr << "parsing " << jsonStr
         << ", error at position " << ex.GetPosition() << ": " << ex.what() << endl;
@@ -116,7 +116,7 @@ void TestParseLiteral(string jsonStr)
         ghjson::Json json = ghjson::Parse(jsonStr);
         succ++;
     } 
-    catch (const ghjson::JsonParseException& ex) 
+    catch (const ghjson::ghJsonException& ex) 
     {
         cerr << "parsing " << jsonStr
         << ",error at position " << ex.GetPosition() << ": " << ex.what() << endl;
@@ -232,8 +232,25 @@ void TestParse()
     //TestParseWrong();
 }
 
+void TestSetObject()
+{
+    ghjson::Json jsonObject ({{"key1", "value1"},{"key2", 42}});
+    
+}
+
+void TestSet()
+{
+    TestSetObject();
+}
+
+void TestOther()
+{
+    ghjson::Json test1;
+    cout << test1.Type() << endl;
+}
 int main()
 {
-    TestParse();
+    //TestParse();
+    TestOther();
     cout << "success :" << succ << " total :" << count << endl;
 }

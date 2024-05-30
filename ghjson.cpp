@@ -189,7 +189,7 @@ namespace ghjson
     }
     //Comparisons
 
-    //Json Construtor
+    //Json Constructor
     Json::Json() noexcept                : m_ptr(GetDefaultValue().null) {}
     Json::Json(std::nullptr_t) noexcept  : m_ptr(GetDefaultValue().null) {}
     Json::Json(int value)                : m_ptr(std::make_shared<JsonNumber>(value)) {}
@@ -202,14 +202,14 @@ namespace ghjson
     Json::Json(array &&values)           : m_ptr(std::make_shared<JsonArray>(move(values))) {}
     Json::Json(const object &values)     : m_ptr(std::make_shared<JsonObject>(values)) {}
     Json::Json(object &&values)          : m_ptr(std::make_shared<JsonObject>(move(values))) {}
-    //Json Construtor
+    //Json Constructor
 
     //parse
     void CheckIndex(const std::string& str, size_t idx) 
     {
         if (idx >= str.size()) 
         {
-            throw JsonParseException("Unexpected end", idx);
+            throw ghJsonException("Unexpected end", idx);
         }
     }
 
@@ -248,7 +248,7 @@ namespace ghjson
                 CheckIndex(str, idx);
                 
                 if(str[idx]!=':')
-                    throw JsonParseException("[ERROR]: object parsing, expect':', got " + str[idx], idx);
+                    throw ghJsonException("[ERROR]: object parsing, expect':', got " + str[idx], idx);
                 idx++;
                 
                 ParseWhitespace(str, idx);
@@ -258,9 +258,9 @@ namespace ghjson
                 cout << "str[idx]: " << str[idx]<<endl;
                 out.emplace(key, value);
             }
-            catch(const JsonParseException& ex)
+            catch(const ghJsonException& ex)
             {
-                JsonParseException("[ERROR]: object parse worng, " + std::string(ex.what()) , idx);
+                throw ghJsonException("[ERROR]: object parse worng, " + std::string(ex.what()) , idx);
             }
             ParseWhitespace(str, idx);
             CheckIndex(str, idx);
@@ -268,7 +268,7 @@ namespace ghjson
             if(str[idx] == '}')
                 break;
             if(str[idx] != ',')
-                throw JsonParseException("[ERROR]: object format worng, ", idx);
+                throw ghJsonException("[ERROR]: object format worng, ", idx);
             idx++;
         }
         idx++;
@@ -290,16 +290,16 @@ namespace ghjson
                 Json test = ParseJson(str, idx);
                 out.emplace_back(std::move(test));
             }
-            catch(const JsonParseException& ex)
+            catch(const ghJsonException& ex)
             {
-                JsonParseException("[ERROR]: array parse worng, " + std::string(ex.what()) , idx);
+                throw ghJsonException("[ERROR]: array parse worng, " + std::string(ex.what()) , idx);
             }
             ParseWhitespace(str, idx);
             CheckIndex(str, idx);
             if(str[idx] == ']')
                 break;
             if(str[idx] != ',')
-                throw JsonParseException("[ERROR]: array format worng, ", idx);
+                throw ghJsonException("[ERROR]: array format worng, ", idx);
             idx++;
         }
         idx++;
@@ -314,7 +314,7 @@ namespace ghjson
         {
             if(idx == str.size())
             {
-                throw JsonParseException("Unexpected end", idx);
+                throw ghJsonException("Unexpected end", idx);
             }
             if(str[idx] == '\"')
                 break;
@@ -331,7 +331,7 @@ namespace ghjson
                     case 'n' :  out+='\n'; break;
                     case 'r' :  out+='\r'; break;
                     case 't' :  out+='\t'; break;
-                    default : throw JsonParseException("unknow sequence:" + std::string(1, str[idx-1]) + std::string(1, str[idx]), idx);
+                    default : throw ghJsonException("unknow sequence:" + std::string(1, str[idx-1]) + std::string(1, str[idx]), idx);
                 }
             }
             else
@@ -374,7 +374,7 @@ namespace ghjson
         }
         else
         {
-            throw JsonParseException("[ERROR]:wrong number format", idx);
+            throw ghJsonException("[ERROR]:wrong number format", idx);
         }
 
         if(idx < len && str[idx] == '.')
@@ -386,7 +386,7 @@ namespace ghjson
             }
             else
             {
-                throw JsonParseException("[ERROR]:wrong number format", idx);
+                throw ghJsonException("[ERROR]:wrong number format", idx);
             }
             
             while(idx < len && InRange(str[idx], '0', '9'))
@@ -409,7 +409,7 @@ namespace ghjson
             }
             else
             {
-                throw JsonParseException("[ERROR]:wrong number format", idx);
+                throw ghJsonException("[ERROR]:wrong number format", idx);
             }
 
             while(idx < len && InRange(str[idx], '0', '9'))
@@ -428,7 +428,7 @@ namespace ghjson
             idx += literal.length();
             return target;
         }
-        throw JsonParseException("[ERROR]:expected (" + literal + "), got (" + str.substr(idx, literal.length()) + ")", idx);
+        throw ghJsonException("[ERROR]:expected (" + literal + "), got (" + str.substr(idx, literal.length()) + ")", idx);
     }
 
     Json ParseJson(const std::string & str, size_t & idx)
@@ -474,8 +474,8 @@ namespace ghjson
     //parse
 
     //dump
-    void Json::dump(std::string &out) const
-    {
+    void Json::dump(std::string &out) const 
+    { 
         m_ptr->dump(out);
     }
     //JsonNull
@@ -538,6 +538,6 @@ namespace ghjson
         }
         out += "\n}";
     }
-
     //dump
+
 }

@@ -77,7 +77,8 @@ namespace ghjson
 
             //dump
             void dump(std::string &out) const;
-            std::string dump() const
+
+            inline std::string dump() const
             {
                 std::string str;
                 dump(str);
@@ -88,10 +89,10 @@ namespace ghjson
             std::shared_ptr<JsonValue> m_ptr;
     };
 
-    class JsonParseException : public std::runtime_error 
+    class ghJsonException : public std::runtime_error 
     {
         public:
-            JsonParseException(const std::string& message, size_t position): std::runtime_error(message), pos(position) {}
+            ghJsonException(const std::string& message, size_t position): std::runtime_error(message), pos(position) {}
             size_t GetPosition() const { return pos; }
         private:
             size_t pos;
@@ -99,4 +100,36 @@ namespace ghjson
     
     Json Parse(const std::string & in);
     
+    inline Json Parse(const char * in)
+    {
+        if(in)
+        {
+            return Parse(std::string(in));
+        }
+        else
+        {
+            throw ghJsonException("null str", 0);
+        }
+    }
+
+    // 定义一个将JsonType转换为字符串的函数
+    inline const char* ToString(ghjson::JsonType type)
+    {
+        switch (type) 
+        {
+            case ghjson::JsonType::NUL:    return "null";
+            case ghjson::JsonType::NUMBER: return "number";
+            case ghjson::JsonType::BOOL:   return "bool";
+            case ghjson::JsonType::STRING: return "string";
+            case ghjson::JsonType::ARRAY:  return "array";
+            case ghjson::JsonType::OBJECT: return "object";
+            default:                       return "unknown";
+        }
+    }
+
+    inline std::ostream & operator<<(std::ostream & os, ghjson::JsonType tag)
+    {
+        return os << ToString(tag);
+    }
 }
+
