@@ -81,6 +81,9 @@ namespace ghjson
 
             void AddToArray (const Json & value);
             void AddToObject(const std::string & key, const Json & value);
+
+            void RemoveFromArray(size_t index) ;
+            void RemoveFromObject(const std::string& key);
             //SetValue
 
             //Comparisons
@@ -106,6 +109,8 @@ namespace ghjson
             //swap
             void swap(Json &other) noexcept;
             //swap
+        
+            
         private:
             std::shared_ptr<JsonValue> m_ptr;
     };

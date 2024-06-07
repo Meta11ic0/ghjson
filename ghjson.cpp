@@ -209,6 +209,10 @@ namespace ghjson
     }
     //GetValue
 
+    //
+
+    //
+
     //SetValue
     void Json::SetNumber(double               value) { m_ptr->SetNumber(value); }
     void Json::SetBool  (bool                 value) { m_ptr->SetBool(value);   }

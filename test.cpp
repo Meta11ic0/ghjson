@@ -232,25 +232,76 @@ void TestParse()
     //TestParseWrong();
 }
 
+void TestSetNumer()
+{
+    ghjson::Json num ={1234};
+    cout << num.GetNumber() << endl;
+    cout << num.Type() << endl;
+    num.SetNumber(99.123);
+    cout << num.GetNumber() << endl;
+}
+
+void TestSetArray()
+{
+    cout << __func__ << endl;
+    ghjson::array test = {}; 
+    ghjson::Json jsonarray (test);
+
+    jsonarray.AddToArray({});
+    jsonarray.AddToArray(true);
+    jsonarray.AddToArray(123123);
+    jsonarray.AddToArray("12312312312312312123");
+    cout << jsonarray.GetArray().size() << endl;
+    cout << jsonarray.Dump() << endl;
+    for(auto iter  : jsonarray.GetArray())
+    {
+        if(iter.is_number() && iter.GetNumber() == 123123)
+        {
+            cout << "Before modification: " << iter.GetNumber() << endl;
+            iter.SetNumber(1234);
+            cout << "After modification: " << iter.GetNumber() << endl;
+        }
+    }
+    cout << jsonarray.Dump() << endl;
+}
+
 void TestSetObject()
 {
-    ghjson::Json jsonObject ({{"key1", "value1"},{"key2", 42}});
-    
+    ghjson::object test = {}; 
+    ghjson::Json jsonboject(test);
+    cout << jsonboject.Type() << endl;
+    jsonboject.AddToObject("key1", 123);
+    jsonboject.AddToObject("key2", true);
+    jsonboject.AddToObject("key213213", "12312312");
+    cout << jsonboject.Dump() << endl;
+    ghjson::object tt = jsonboject.GetObject();
+    for(auto item : test)
+    {
+        cout << item.first  << endl;
+    }
 }
 
 void TestSet()
 {
-    TestSetObject();
+    TestSetNumer();
+    TestSetArray();
+    //TestSetObject();
+    
 }
 
 void TestOther()
 {
     ghjson::Json test1;
+    cout << test1.GetNumber() << endl;
     cout << test1.Type() << endl;
+    test1.SetNumber(12) ;
+    cout << test1.GetNumber() << endl;
 }
+
 int main()
 {
     //TestParse();
-    TestOther();
-    cout << "success :" << succ << " total :" << count << endl;
+    //cout << "success :" << succ << " total :" << count << endl;
+    //TestOther();
+    TestSet();
 }
