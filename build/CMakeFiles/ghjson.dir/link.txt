@@ -1,2 +1,0 @@
-D:\Code\Environment\C++\mingw64\bin\ar.exe qc libghjson.a CMakeFiles/ghjson.dir/ghjson.cpp.obj
-D:\Code\Environment\C++\mingw64\bin\ranlib.exe libghjson.a
