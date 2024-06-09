@@ -1,0 +1,14 @@
+[
+{
+  "directory": "D:/Code/Project/C++/ghjson/build",
+  "command": "D:\\Code\\Environment\\C++\\mingw64\\bin\\g++.exe   -g -std=gnu++14 -o CMakeFiles\\ghjson.dir\\ghjson.cpp.obj -c D:\\Code\\Project\\C++\\ghjson\\ghjson.cpp",
+  "file": "D:/Code/Project/C++/ghjson/ghjson.cpp",
+  "output": "CMakeFiles/ghjson.dir/ghjson.cpp.obj"
+},
+{
+  "directory": "D:/Code/Project/C++/ghjson/build",
+  "command": "D:\\Code\\Environment\\C++\\mingw64\\bin\\g++.exe   -g -std=gnu++14 -o CMakeFiles\\test.dir\\test.cpp.obj -c D:\\Code\\Project\\C++\\ghjson\\test.cpp",
+  "file": "D:/Code/Project/C++/ghjson/test.cpp",
+  "output": "CMakeFiles/test.dir/test.cpp.obj"
+}
+]

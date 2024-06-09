@@ -4,27 +4,86 @@
 #include <map>
 #include <vector>
 #include <memory>
-#include <cassert>
 #include <stdexcept>
-#include <utility>
+
+#define MAXDEPTH 10
 
 namespace ghjson
 {
+
     class Json;
     class JsonValue;
-
+    
     using array = std::vector<Json>;
     using object = std::map<std::string, Json>;
+
+    class ghJsonException : public std::runtime_error 
+    {
+        public:
+            ghJsonException(const std::string& message, size_t position): std::runtime_error(message), pos(position) {}
+            size_t getPosition() const { return pos; }
+        private:
+            size_t pos;
+    };
 
     enum class JsonType
     {
         NUL, NUMBER, BOOL, STRING, ARRAY, OBJECT
     };
 
-    class Json
+    //JsonValue
+    class JsonValue
     {
         public:
-            //Constructor
+            //type
+            virtual JsonType type() const = 0;
+            //type
+            //comparisons
+            virtual bool equals(const JsonValue * other) const = 0 ;
+            virtual bool less(const JsonValue * other) const = 0 ;
+            //comparisons
+            //getvalue
+            virtual double              getNumber() const  = 0;
+            virtual bool                getBool  () const  = 0;
+            virtual const std::string & getString() const  = 0;
+            virtual const array &       getArray () const  = 0;
+            virtual const object &      getObject() const  = 0;
+            //getvalue
+            //operator[]
+            virtual Json& operator[](size_t index)  = 0;
+            virtual Json& operator[](const std::string& key)  = 0;
+            virtual const Json& operator[](size_t index) const   = 0;
+            virtual const Json& operator[](const std::string& key) const  = 0;
+            //operator[]
+            //setvalue
+            virtual void setNumber (double               value)  = 0;
+            virtual void setBool   (bool                 value)  = 0;
+            virtual void setString (const  std::string & value)  = 0;
+            virtual void setArray  (const  array       & value)  = 0;
+            virtual void setObject (const  object      & value)  = 0;
+
+            virtual void addToArray (const Json & value)  = 0;
+            virtual void addToObject(const std::string & key, const Json & value)  = 0;
+
+            virtual void removeFromArray(size_t index)  = 0;
+            virtual void removeFromObject(const std::string& key) = 0;
+            //setvalue
+            //clone
+            virtual std::unique_ptr<JsonValue> clone() const = 0;
+            //clone
+            //dump
+            virtual void dump(std::string & str) const = 0;
+            //dump
+
+            virtual ~JsonValue() noexcept {} ;
+    };
+
+    class Json
+    {
+        private:
+            std::unique_ptr<JsonValue> m_ptr;
+        public:
+            //constructor
             Json() noexcept;                // NUL
             Json(std::nullptr_t) noexcept;  // NUL
             Json(int value);             // NUMBER
@@ -37,108 +96,87 @@ namespace ghjson
             Json(array &&values);           // ARRAY
             Json(const object &values);     // OBJECT
             Json(object &&values);          // OBJECT
+
             Json(const Json & other);
             Json(Json && other) noexcept;
+
             Json& operator=(const Json& other) ;
-            Json& operator=(Json&& other) noexcept;
-            //Constructor
+            Json& operator=(Json && other) noexcept;
+            
+            ~Json() noexcept {};
+            //constructor
 
-            //Type
-            JsonType Type() const;
-            bool is_null()   const { return Type() == JsonType::NUL; }
-            bool is_number() const { return Type() == JsonType::NUMBER; }
-            bool is_bool()   const { return Type() == JsonType::BOOL; }
-            bool is_string() const { return Type() == JsonType::STRING; }
-            bool is_array()  const { return Type() == JsonType::ARRAY; }
-            bool is_object() const { return Type() == JsonType::OBJECT; }
-            //Type
+            //type
+            JsonType type() const;
+            bool is_null()   const;
+            bool is_number() const;
+            bool is_bool()   const;
+            bool is_string() const;
+            bool is_array()  const;
+            bool is_object() const;
+            //type
 
-            //GetValue
-            double              GetNumber() const;
-            bool                GetBool()   const;
-            const std::string & GetString() const;
-            const array &       GetArray()  const;
-            const object &      GetObject() const;
+            //getValue
+            double              getNumber() const;
+            bool                getBool()   const;
+            const std::string & getString() const;
+            const array &       getArray()  const;
+            const object &      getObject() const;
+            //getValue
 
-            const Json &        operator[](size_t i) const;
-            const Json &        operator[](const std::string &key) const;
-            //GetValue
+            //operator[]
+            Json & operator[](size_t index);
+            Json & operator[](const std::string &key);
+            const Json & operator[](size_t index) const ; 
+            const Json & operator[](const std::string &key) const;
+            //operator[]
 
-            //SetValue
-            void SetNumber (double               value);
-            inline void SetNumber (int value)
-            {
-                SetNumber(static_cast<double>(value));
-            }
-            void SetBool   (bool                 value);
-            void SetString (const  std::string & value);
-            inline void SetString (const char * value)
-            {
-                SetString(std::string(value));
-            }
-            void SetArray  (const  array       & value);
-            void SetObject (const  object      & value);
+            //setValue
+            void setNumber (double               value);
+            void setBool   (bool                 value);
+            void setString (const  std::string & value);
+            void setArray  (const  array       & value);
+            void setObject (const  object      & value);
 
-            void AddToArray (const Json & value);
-            void AddToObject(const std::string & key, const Json & value);
+            void addToArray (const Json & value);
+            void addToObject(const std::string & key, const Json & value);
 
-            void RemoveFromArray(size_t index) ;
-            void RemoveFromObject(const std::string& key);
-            //SetValue
+            void removeFromArray(size_t index) ;
+            void removeFromObject(const std::string& key);
+            //setValue
 
-            //Comparisons
+            //comparisons
             bool operator== (const Json &rhs) const;
             bool operator<  (const Json &rhs) const;
             bool operator!= (const Json &rhs) const { return !(*this == rhs); }
             bool operator<= (const Json &rhs) const { return !(rhs < *this); }
             bool operator>  (const Json &rhs) const { return  (rhs < *this); }
-            bool operator>= (const Json &rhs) const { return !(*this < rhs); }
-            //Comparisons
+            bool operator>= (const Json &rhs) const { return !(*this < rhs); }  
+            //comparisons
 
-            //Dump
-            void Dump(std::string &out) const;
-
-            inline std::string Dump() const
+            //dump
+            void dump(std::string & str) const;
+            inline const std::string dump()
             {
                 std::string str;
-                Dump(str);
+                dump(str);
                 return str;
             }
-            //Dump
+            //dump
 
-            //swap
-            void swap(Json &other) noexcept;
-            //swap
-        
-            
-        private:
-            std::shared_ptr<JsonValue> m_ptr;
+            //check
+            inline void check() const
+            {
+                if(!m_ptr)
+                {
+                    throw ghJsonException("Bad Json access: m_ptr is null", 0);
+                } 
+            }
+            //check
     };
 
-    class ghJsonException : public std::runtime_error 
-    {
-        public:
-            ghJsonException(const std::string& message, size_t position): std::runtime_error(message), pos(position) {}
-            size_t GetPosition() const { return pos; }
-        private:
-            size_t pos;
-    };
-    
-    Json Parse(const std::string & in);
-    
-    inline Json Parse(const char * in)
-    {
-        if(in)
-        {
-            return Parse(std::string(in));
-        }
-        else
-        {
-            throw ghJsonException("null str", 0);
-        }
-    }
+    Json parse(const std::string & in);
 
-    // 定义一个将JsonType转换为字符串的函数
     inline const char * ToString(ghjson::JsonType type)
     {
         switch (type) 
@@ -157,5 +195,5 @@ namespace ghjson
     {
         return os << std::string(ToString(tag));
     }
-}
 
+}

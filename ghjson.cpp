@@ -2,300 +2,354 @@
 
 namespace ghjson
 {
-    //JsonValue
-    class JsonValue
-    {
-        public:            
-            virtual JsonType Type() const = 0;
 
-            virtual bool equals(const JsonValue * other) const = 0;
-            virtual bool less  (const JsonValue * other) const = 0;
-
-            virtual void Dump(std::string &out) const = 0;
-            
-            virtual double              GetNumber() const;
-            virtual bool                GetBool  () const;
-            virtual const std::string & GetString() const;
-            virtual const array &       GetArray () const;
-            virtual const object &      GetObject() const;
-
-            virtual const Json& operator[](size_t i) const;
-            virtual const Json& operator[](const std::string& key) const;
-
-            virtual void SetNumber (double               value);
-            virtual void SetBool   (bool                 value);
-            virtual void SetString (const  std::string & value);
-            virtual void SetArray  (const  array       & value);
-            virtual void SetObject (const  object      & value);
-
-            virtual void AddToArray (const Json & value);
-            virtual void AddToObject(const std::string & key, const Json & value);
-
-            virtual ~JsonValue(){};
-    };
-
-    template <JsonType tag, typename T>
+    template<JsonType tag, typename T>
     class Value : public JsonValue
     {
         protected:
+            T m_value;
+            //constructor
             explicit Value(const T &value) : m_value(value) {}
             explicit Value(T &&value)      : m_value(std::move(value)) {}
+            //constructor
+            //type
+            JsonType type() const override { return tag; }
+            //type
+            //comparisons
+            bool equals(const JsonValue * other) const { return m_value == static_cast<const Value<tag, T> *>(other)->m_value; }
+            bool less(const JsonValue * other) const { return m_value < static_cast<const Value<tag, T> *>(other)->m_value; }
+            //comparisons
 
-            JsonType Type() const override { return tag; }
-            T m_value;
+                        //getvalue
+            virtual double              getNumber() const { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            virtual bool                getBool  () const { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            virtual const std::string & getString() const { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            virtual const array &       getArray () const { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            virtual const object &      getObject() const { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            //getvalue
 
-            void Dump(std::string &out) const;
+            //operator[]
+            virtual Json& operator[](size_t index) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            virtual Json& operator[](const std::string& key) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            virtual const Json& operator[](size_t index) const  { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            virtual const Json& operator[](const std::string& key) const { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            //operator[]
+            
+            //setvalue
+            virtual void setNumber (double               value) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            virtual void setBool   (bool                 value) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            virtual void setString (const  std::string & value) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            virtual void setArray  (const  array       & value) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            virtual void setObject (const  object      & value) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
 
-            //Comparisons
-            bool equals(const JsonValue * other) const {
-                return m_value == static_cast<const Value<tag, T> *>(other)->m_value;
-            }
-            bool less(const JsonValue * other) const {
-                return m_value < static_cast<const Value<tag, T> *>(other)->m_value;
-            }
-            //Comparisons
+            virtual void addToArray (const Json & value) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            virtual void addToObject(const std::string & key, const Json & value) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
 
+            virtual void removeFromArray(size_t index) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            virtual void removeFromObject(const std::string& key) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            //setvalue
     };
 
     class NullClass
     {
-    public:
-        bool operator == (NullClass) const { return true; }
-        bool operator < (NullClass) const { return false; }
+        public:
+            bool operator == (NullClass) const { return true; }
+            bool operator < (NullClass)  const { return false; }
     };
 
-    class JsonNull final : public Value<JsonType::NUL, NullClass>
+    class JsonNull : public Value<JsonType::NUL, NullClass>
     {
         public:
-            JsonNull() : Value({}) {};
+            explicit JsonNull() : Value(NullClass()) {};
+            //clone
+            virtual std::unique_ptr<JsonValue> clone() const override{ return std::make_unique<JsonNull>(); }
+            //clone
+            void dump(std::string &out) const { out += "null"; }
     };
 
-    class JsonNumber final : public Value<JsonType::NUMBER, double>
+    class JsonBool : public Value<JsonType::BOOL, bool>
     {
         public:
-            explicit JsonNumber(double value) : Value(value) {}
+            explicit JsonBool(bool value) : Value(value) {};
         private:
-            double GetNumber()             const override { return m_value; }
-            void   SetNumber(double value) override       { m_value = value;}
+            //getValue
+            bool getBool() const override { return m_value; }
+            //getValue
+            //setvalue
+            void setBool (bool value) override { m_value = value; }
+            //setvalue
+            //clone
+            virtual std::unique_ptr<JsonValue> clone() const override{ return std::make_unique<JsonBool>(m_value); }
+            //clone
+            //dump
+            void dump(std::string &out) const { out += (m_value ? "true" : "false"); }
+            //dump
     };
 
-    class JsonBool final : public Value<JsonType::BOOL, bool>
+    class JsonNumber : public Value<JsonType::NUMBER, double>
     {
         public:
-            explicit JsonBool(bool value) : Value(value) {}
+            explicit JsonNumber(double value) : Value(value) {};
         private:
-            bool GetBool() const override     { return m_value; }
-            void SetBool(bool value) override { m_value = value;}
+            //getValue
+            double getNumber() const override { return m_value; }
+            //getValue
+            //setvalue
+            void setNumber(double value) override { m_value = value; }
+            //setvalue
+            //clone
+            virtual std::unique_ptr<JsonValue> clone() const override{ return std::make_unique<JsonNumber>(m_value); }
+            //clone
+            //dump
+            void dump(std::string &out) const { out += std::to_string(m_value); }
+            //dump
     };
 
-    class JsonString final : public Value<JsonType::STRING, std::string>
+    class JsonString : public Value<JsonType::STRING, std::string>
     {
         public:
             explicit JsonString(const std::string& value) : Value(value) {}
             explicit JsonString(std::string&& value) : Value(move(value)) {}
         private:
-            const std::string& GetString() const override { return m_value; }
-            void SetString(const std::string& value) override { m_value = value;}
+            //getValue
+            const std::string & getString() const override { return m_value; }
+            //getValue
+            //setvalue
+            void setString (const std::string & value) override { m_value = value; }
+            //setvalue
+            //clone
+            virtual std::unique_ptr<JsonValue> clone() const override{ return std::make_unique<JsonString>(m_value); }
+            //clone
+            //dump
+            void dump(std::string &out) const { out += "\"" + m_value + "\""; }
+            //dump
     };
 
-    class JsonArray final : public Value<JsonType::ARRAY, array>
+    class JsonArray : public Value<JsonType::ARRAY, array>
     {
         public:
             explicit JsonArray(const array& value) : Value(value) {};
-            explicit JsonArray(array&& value) : Value(move(value)) {};
+            explicit JsonArray(array&& value) : Value(move(value)) {};        
         private:
-            const array& GetArray() const override { return m_value; }
-            const Json& operator[](size_t i) const;
-
-            void SetArray(const array & value) override { m_value = value;}
-            void AddToArray(const Json & value) override { m_value.push_back(value); }
-
-            void RemoveFromArray(size_t index) 
+            //getValue
+            const array & getArray() const override { return m_value; }
+            //getValue
+            //setvalue
+            void setArray (const array & value) override { m_value = value; }
+            void addToArray (const Json & value) override{ m_value.emplace_back(value);}
+            void removeFromArray (size_t index) override
             {
                 if (index < m_value.size()) 
                 {
                     m_value.erase(m_value.begin() + index);
-                } 
-                else 
+                }
+                else
                 {
-                    throw ghJsonException("Index out of bounds", index);
+                    throw ghJsonException(std::string(__func__) + "index out of range!", 0);
                 }
             }
+            //setvalue
+            //operator[]
+            Json & operator[] (size_t index) override
+            {
+                if (index < m_value.size()) 
+                {
+                    return m_value[index];
+                }
+                else
+                {
+                    throw ghJsonException(std::string(__func__) + "index out of range!", 0);
+                }
+            }
+            const Json & operator[] (size_t index) const override
+            {
+                if (index < m_value.size()) 
+                {
+                    return m_value[index];
+                }
+                else
+                {
+                    throw ghJsonException(std::string(__func__) + "index out of range!", 0);
+                }
+            }
+            //operator[]
+            //clone
+            virtual std::unique_ptr<JsonValue> clone() const override{ return std::make_unique<JsonArray>(m_value); }
+            //clone
+            //dump
+            void dump(std::string &out) const 
+            {
+                out += '[';
+                bool first = true;
+                for (const auto& item : m_value)
+                {
+                    if (!first)
+                    {
+                        out += ",\n";
+                    }
+                    first = false;
+                    item.dump(out);
+                }
+                out += ']';
+            }
+            //dump
     };
 
-    class JsonObject final : public Value<JsonType::OBJECT, object>
+    class JsonObject : public Value<JsonType::OBJECT, object>
     {
         public:
             explicit JsonObject(const object& value) : Value(value) {};
             explicit JsonObject(object&& value) : Value(move(value)) {};
         private:
-            const object& GetObject() const override { return m_value; }
-            const Json& operator[](const std::string& key) const;
-
-            void SetObject (const  object      & value) override { m_value = value;}
-            void AddToObject(const std::string & key, const Json & value) override { m_value[key] = value; }
-
-            void RemoveFromObject(const std::string& key) 
+            //getValue
+            const object & getObject() const override { return m_value; }
+            //getValue
+            //setvalue
+            void setObject (const object & value) override { m_value = value; }
+            void addToObject(const std::string & key, const Json & value){ m_value[key] = value; }
+            void removeFromObject (const std::string& key) override
             {
-                if (m_value.find(key) != m_value.end()) 
+                auto iter = m_value.find(key);
+                if(iter == m_value.end())
                 {
-                    m_value.erase(key);
-                } 
-                else 
-                {
-                    throw ghJsonException("Key not found", 0); // 0 as a placeholder
+                    throw ghJsonException(std::string(__func__) + " key :[" + key + "] not exits! ", 0);
                 }
+                else
+                    m_value.erase(iter);
             }
+            //setvalue
+            //operator[]
+            Json & operator[](const std::string& key) override { return m_value[key]; }
+            const Json & operator[](const std::string& key) const override 
+            { 
+                auto iter = m_value.find(key);
+                if(iter == m_value.end())
+                {
+                    throw ghJsonException(std::string(__func__) + " key :[" + key + "] not exits! ", 0);
+                }
+                else
+                    return iter->second;
+            }
+            //operator[]
+            //clone
+            virtual std::unique_ptr<JsonValue> clone() const override{ return std::make_unique<JsonObject>(m_value); }
+            //clone
+            //dump
+            void dump(std::string &out) const 
+            {
+                out += "{\n";
+                bool first = true;
+                for (const auto& item : m_value)
+                {
+                    if (!first)
+                    {
+                        out += ",\n";
+                    }
+                    first = false;
+                    out += '\t' + item.first + " : ";
+                    item.second.dump(out);
+                }
+                out += "\n}";
+            }
+            //dump
     };
     //JsonValue
 
-    //Static Value
-    class DefaultValue
-    {
-        public:
-            const std::shared_ptr<JsonValue> null = std::make_shared<JsonNull>();
-            const std::shared_ptr<JsonValue> t    = std::make_shared<JsonBool>(true);
-            const std::shared_ptr<JsonValue> f    = std::make_shared<JsonBool>(false);
-            const std::string empty_string;
-            const array       empty_vector;
-            const object      empty_map;
-            DefaultValue(){};
-    };
-
-    static const DefaultValue & GetDefaultValue()
-    {
-        static const DefaultValue d{};
-        return d;
-    };
-
-    static const Json & GetJsonNull()
-    {
-        static const Json jsonnull; //会调用Json()，从而要使用GetDefaultJsonValue().null，所以将Json默认值跟JsonValue默认值分隔开，不然会有循环依赖
-        return jsonnull;
-    };
-    //Static Value
-
-    //GetType
-    JsonType Json::Type() const { return m_ptr->Type(); }
-    //GetType
-
-    //GetValue
     //Json
-    double              Json::GetNumber() const { return m_ptr->GetNumber(); }
-    bool                Json::GetBool()   const { return m_ptr->GetBool();   }
-    const std::string & Json::GetString() const { return m_ptr->GetString(); }
-    const array &       Json::GetArray()  const { return m_ptr->GetArray();  }
-    const object &      Json::GetObject() const { return m_ptr->GetObject();  }
-    //JsonValue
-    double              JsonValue::GetNumber() const { return 0;                                  }
-    bool                JsonValue::GetBool()   const { return false;                              }
-    const std::string & JsonValue::GetString() const { return GetDefaultValue().empty_string; }
-    const array &       JsonValue::GetArray()  const { return GetDefaultValue().empty_vector; }
-    const object &      JsonValue::GetObject() const { return GetDefaultValue().empty_map;    }
-    //operator[]
-    const Json & Json::operator[] (size_t i)                 const { return (*m_ptr)[i];   }
-    const Json & Json::operator[] (const std::string &key)   const { return (*m_ptr)[key]; }
-    const Json & JsonValue::operator[] (size_t)              const { return GetJsonNull(); }
-    const Json & JsonValue::operator[] (const std::string &) const { return GetJsonNull(); }
-    //特化的operator[]
-    const Json & JsonArray::operator[] (size_t i) const 
-    { 
-        return (i > m_value.size() ? GetJsonNull() : m_value[i]);
-    }
-    const Json & JsonObject::operator[] (const std::string & key) const 
-    { 
-        auto iter = m_value.find(key);
-        return (iter == m_value.end() ? GetJsonNull() : iter->second); 
-    }
-    //GetValue
+    //constructor
+    Json::Json() noexcept                : m_ptr(std::make_unique<JsonNull>()) {}
+    Json::Json(std::nullptr_t) noexcept  : m_ptr(std::make_unique<JsonNull>()) {}
+    Json::Json(int value)                : m_ptr(std::make_unique<JsonNumber>(double(value))) {}
+    Json::Json(double value)             : m_ptr(std::make_unique<JsonNumber>(value)) {}
+    Json::Json(bool value)               : m_ptr(std::make_unique<JsonBool>(value)) {}
+    Json::Json(const std::string &value) : m_ptr(std::make_unique<JsonString>(value)) {}
+    Json::Json(std::string &&value)      : m_ptr(std::make_unique<JsonString>(move(value))) {}
+    Json::Json(const char * value)       : m_ptr(std::make_unique<JsonString>(value)) {}
+    Json::Json(const array &values)      : m_ptr(std::make_unique<JsonArray>(values)) {}
+    Json::Json(array &&values)           : m_ptr(std::make_unique<JsonArray>(move(values))) {}
+    Json::Json(const object &values)     : m_ptr(std::make_unique<JsonObject>(values)) {}
+    Json::Json(object &&values)          : m_ptr(std::make_unique<JsonObject>(move(values))) {}
 
-    //
-
-    //
-
-    //SetValue
-    void Json::SetNumber(double               value) { m_ptr->SetNumber(value); }
-    void Json::SetBool  (bool                 value) { m_ptr->SetBool(value);   }
-    void Json::SetString(const  std::string & value) { m_ptr->SetString(value); }
-    void Json::SetArray (const  array       & value) { m_ptr->SetArray(value);  }
-    void Json::SetObject(const  object      & value) { m_ptr->SetObject(value); }
-
-    void Json::AddToArray (const Json & value)                          { m_ptr->AddToArray(value);       }
-    void Json::AddToObject(const std::string & key, const Json & value) { m_ptr->AddToObject(key, value); }
-
-    void JsonValue::SetNumber(double              value) { throw ghJsonException("Invalid type", 0); }
-    void JsonValue::SetBool  (bool                value) { throw ghJsonException("Invalid type", 0); }
-    void JsonValue::SetString(const std::string & value) { throw ghJsonException("Invalid type", 0); }
-    void JsonValue::SetArray (const array       & value) { throw ghJsonException("Invalid type", 0); }
-    void JsonValue::SetObject(const object      & value) { throw ghJsonException("Invalid type", 0); }
-
-    void JsonValue::AddToArray (const Json & value)                          { throw ghJsonException("Invalid type", 0); }
-    void JsonValue::AddToObject(const std::string & key, const Json & value) { throw ghJsonException("Invalid type", 0); }
-    //SetValue
-
-    //Comparisons
-    bool Json::operator== (const Json &rhs) const
-    {
-        if(m_ptr == rhs.m_ptr)
-            return true;
-        else if(m_ptr->Type() != rhs.Type())
-            return false;
-        
-        //没法直接return m_ptr->m_value == rhs.m_value;
-        return m_ptr->equals(rhs.m_ptr.get());     
-    }
-
-    bool Json::operator<  (const Json &rhs) const
-    {
-        if (m_ptr == rhs.m_ptr)
-            return false;
-        if (m_ptr->Type() != rhs.m_ptr->Type())
-            return m_ptr->Type() < rhs.m_ptr->Type();
-
-        return m_ptr->less(rhs.m_ptr.get());
-    }
-    //Comparisons
-
-    //Json Constructor
-    Json::Json() noexcept                : m_ptr(GetDefaultValue().null) {}
-    Json::Json(std::nullptr_t) noexcept  : m_ptr(GetDefaultValue().null) {}
-    Json::Json(int value)                : m_ptr(std::make_shared<JsonNumber>(value)) {}
-    Json::Json(double value)             : m_ptr(std::make_shared<JsonNumber>(value)) {}
-    Json::Json(bool value)               : m_ptr(value ? GetDefaultValue().t : GetDefaultValue().f) {}
-    Json::Json(const std::string &value) : m_ptr(std::make_shared<JsonString>(value)) {}
-    Json::Json(std::string &&value)      : m_ptr(std::make_shared<JsonString>(move(value))) {}
-    Json::Json(const char * value)       : m_ptr(std::make_shared<JsonString>(value)) {}
-    Json::Json(const array &values)      : m_ptr(std::make_shared<JsonArray>(values)) {}
-    Json::Json(array &&values)           : m_ptr(std::make_shared<JsonArray>(move(values))) {}
-    Json::Json(const object &values)     : m_ptr(std::make_shared<JsonObject>(values)) {}
-    Json::Json(object &&values)          : m_ptr(std::make_shared<JsonObject>(move(values))) {}
-
-    Json::Json(const Json& other) : m_ptr(other.m_ptr) {}
-
+    Json::Json(const Json & other) : m_ptr(other.m_ptr ? other.m_ptr->clone() : std::make_unique<JsonNull>()) {}
+    Json::Json(Json && other) noexcept : m_ptr(std::move(other.m_ptr)){}
     Json& Json::operator=(const Json& other) 
     {
-        if (this != &other) 
-        {
-            m_ptr = other.m_ptr;
+        if (this != &other) // 防止自赋值
+        { 
+            m_ptr = other.m_ptr ? other.m_ptr->clone() : std::make_unique<JsonNull>(); //避免有nullptr
         }
         return *this;
     }
-
-    Json::Json(Json&& other) noexcept 
-    {
-        swap(other);
-    }
-
     Json& Json::operator=(Json&& other) noexcept 
     {
-        swap(other);
+        if (this != &other) // 防止自赋值
+        { 
+            m_ptr = std::move(other.m_ptr) ; //避免有nullptr
+        }
         return *this;
     }
+    //constructor
+    //type
+    JsonType Json::type()      const { return m_ptr->type();              }
+    bool     Json::is_null()   const { return type() == JsonType::NUL;    }
+    bool     Json::is_number() const { return type() == JsonType::NUMBER; }
+    bool     Json::is_bool()   const { return type() == JsonType::BOOL;   }
+    bool     Json::is_string() const { return type() == JsonType::STRING; }
+    bool     Json::is_array()  const { return type() == JsonType::ARRAY;  }
+    bool     Json::is_object() const { return type() == JsonType::OBJECT; }
+    //type
+    //getValue
+    double Json::getNumber() const { check(); return m_ptr->getNumber(); }
+    bool Json::getBool() const { check(); return m_ptr->getBool(); }
+    const std::string & Json::getString() const { check(); return m_ptr->getString(); }
+    const array & Json::getArray()  const { check(); return m_ptr->getArray(); }
+    const object & Json::getObject() const { check(); return m_ptr->getObject(); }
+    //getValue
+    //setValue
+    void Json::setNumber(double value) { check(); return m_ptr->setNumber(value); }
+    void Json::setBool(bool value) { check(); return m_ptr->setBool(value); }
+    void Json::setString(const std::string & value) { check(); return m_ptr->setString(value); }
+    void Json::setArray(const array & value) { check(); return m_ptr->setArray(value); }
+    void Json::setObject(const object & value) { check(); return m_ptr->setObject(value); }
 
-    //Json Constructor
-
+    void Json::addToArray (const Json & value) { check(); return m_ptr->addToArray(value); }
+    void Json::addToObject(const std::string & key, const Json & value) { check(); return m_ptr->addToObject(key, value); }
+    void Json::removeFromArray(size_t index) { check(); return m_ptr->removeFromArray(index); }
+    void Json::removeFromObject(const std::string& key) { check(); return m_ptr->removeFromObject(key); }
+    //setValue
+    //operator[]
+    Json & Json::operator[](size_t i) { check(); return (*m_ptr)[i]; }
+    Json & Json::operator[](const std::string &key) { check(); return (*m_ptr)[key]; }
+    const Json & Json::operator[](size_t i) const { check(); return (*m_ptr)[i]; }
+    const Json & Json::operator[](const std::string &key) const { check(); return (*m_ptr)[key]; }
+    //operator[]
+    //operator==
+    bool Json::operator== (const Json &rhs) const
+    {
+        check();
+        if(m_ptr == rhs.m_ptr)
+            return true;
+        else if(type() != rhs.type())
+            return false;
+        else
+            return m_ptr->equals(rhs.m_ptr.get());
+    }
+    bool Json::operator< (const Json &rhs) const
+    {
+        check();
+        if (m_ptr == rhs.m_ptr)
+            return false;
+        else if (m_ptr->type() != rhs.m_ptr->type())
+            return m_ptr->type() < rhs.m_ptr->type();
+        else
+            return m_ptr->less(rhs.m_ptr.get());
+    }
+    //operator==
+    //dump
+    void Json::dump(std::string &out) const { check();m_ptr->dump(out); }
+    //Json
     //parse
-    void CheckIndex(const std::string& str, size_t idx) 
+    void checkIndex(const std::string& str, size_t idx) 
     {
         if (idx >= str.size()) 
         {
@@ -304,21 +358,21 @@ namespace ghjson
     }
 
     //提前声明为了调用
-    Json ParseJson(const std::string & str, size_t & idx);
-    Json ParseString(const std::string & str, size_t & idx);
+    Json parseJson(const std::string & str, size_t & idx, size_t depth);
+    Json parseString(const std::string & str, size_t & idx);
     
-    void ParseWhitespace(const std::string& str, size_t & idx)
+    void parseWhitespace(const std::string& str, size_t & idx)
     {
         while (idx < str.size() && (str[idx] == ' ' || str[idx] == '\r' || str[idx] == '\n' || str[idx] == '\t'))
             idx++;
     }
 
-    Json ParseObject(const std::string & str, size_t & idx) 
+    Json parseObject(const std::string & str, size_t & idx, size_t depth) 
     {
         object out;
 
-        ParseWhitespace(str, idx);
-        CheckIndex(str, idx);
+        parseWhitespace(str, idx);
+        checkIndex(str, idx);
 
         if(str[idx] == '}')
             return Json(out);
@@ -327,29 +381,29 @@ namespace ghjson
         {
             try
             {
-                ParseWhitespace(str, idx);
-                CheckIndex(str, idx);
+                parseWhitespace(str, idx);
+                checkIndex(str, idx);
 
-                std::string key = ParseString(str, idx).GetString();
+                std::string key = parseString(str, idx).getString();
 
-                ParseWhitespace(str, idx);
-                CheckIndex(str, idx);
+                parseWhitespace(str, idx);
+                checkIndex(str, idx);
                 
                 if(str[idx]!=':')
                     throw ghJsonException("[ERROR]: object parsing, expect':', got " + str[idx], idx);
                 idx++;
                 
-                ParseWhitespace(str, idx);
-                CheckIndex(str, idx);
-                Json value  = ParseJson(str, idx);
+                parseWhitespace(str, idx);
+                checkIndex(str, idx);
+                Json value  = parseJson(str, idx, depth);
                 out.emplace(key, value);
             }
             catch(const ghJsonException& ex)
             {
                 throw ghJsonException("[ERROR]: object parse worng, " + std::string(ex.what()) , idx);
             }
-            ParseWhitespace(str, idx);
-            CheckIndex(str, idx);
+            parseWhitespace(str, idx);
+            checkIndex(str, idx);
             if(str[idx] == '}')
                 break;
             if(str[idx] != ',')
@@ -360,11 +414,11 @@ namespace ghjson
         return Json(out);
     }
 
-    Json ParseArray(const std::string & str, size_t & idx) 
+    Json parseArray(const std::string & str, size_t & idx, size_t depth) 
     {
         array out;
-        ParseWhitespace(str, idx);
-        CheckIndex(str, idx);
+        parseWhitespace(str, idx);
+        checkIndex(str, idx);
         if(str[idx] == ']')
             return Json(out);
 
@@ -372,15 +426,15 @@ namespace ghjson
         {
             try
             {
-                Json test = ParseJson(str, idx);
+                Json test = parseJson(str, idx, depth);
                 out.emplace_back(std::move(test));
             }
             catch(const ghJsonException& ex)
             {
                 throw ghJsonException("[ERROR]: array parse worng, " + std::string(ex.what()) , idx);
             }
-            ParseWhitespace(str, idx);
-            CheckIndex(str, idx);
+            parseWhitespace(str, idx);
+            checkIndex(str, idx);
             if(str[idx] == ']')
                 break;
             if(str[idx] != ',')
@@ -391,7 +445,7 @@ namespace ghjson
         return Json(out);
     }
 
-    Json ParseString(const std::string & str, size_t & idx) 
+    Json parseString(const std::string & str, size_t & idx) 
     {
         std::string out;
         idx++;
@@ -429,12 +483,13 @@ namespace ghjson
         return Json(out);
     }
 
+    /*oldversion
     bool InRange(long x, long lower, long upper)
     {
         return (x >= lower && x <= upper);
     }
 
-    Json ParseNumber(const std::string & str, size_t & idx)
+    Json parseNumber(const std::string & str, size_t & idx)
     {
 
         size_t start = idx;
@@ -505,129 +560,73 @@ namespace ghjson
 
         return Json(std::strtod(str.c_str() + start, nullptr));
     }
+    */
+    Json parseNumber(const std::string &str, size_t &idx) 
+    {
+        size_t processed = 0;
+        double value = std::stod(str.substr(idx), &processed);
+        if (processed == 0) {
+            throw ghJsonException("Invalid number format", idx);
+        }
+        idx += processed;
+        return Json(value);
+    }
 
-    Json ParseLiteral(const std::string &literal, Json target, const std::string & str, size_t & idx) 
+    Json parseLiteral(const std::string &literal, Json target, const std::string & str, size_t & idx) 
     {
         if(str.compare(idx, literal.length(), literal) == 0)
         {
             idx += literal.length();
             return target;
         }
-        throw ghJsonException("[ERROR]:expected (" + literal + "), got (" + str.substr(idx, literal.length()) + ")", idx);
+        else
+            throw ghJsonException("[ERROR]:expected (" + literal + "), got (" + str.substr(idx, literal.length()) + ")", idx);
     }
 
-    Json ParseJson(const std::string & str, size_t & idx)
+    Json parseJson(const std::string & str, size_t & idx, size_t depth)
     {
-        ParseWhitespace(str, idx);
-        CheckIndex(str, idx);
+        if(depth > MAXDEPTH)
+        {
+            throw ghJsonException("exceeded maximum nesting depth", 0);
+        }
+        parseWhitespace(str, idx);
+        checkIndex(str, idx);
 
         if(str[idx] == 'n')
         {
-            return ParseLiteral("null", GetJsonNull(), str, idx);
+            return parseLiteral("null", Json(), str, idx);
         }
         else if(str[idx] == 't')
         {
-            return ParseLiteral("true", Json(true), str, idx);
+            return parseLiteral("true", Json(true), str, idx);
         }
         else if(str[idx] == 'f')
         {
-            return ParseLiteral("false", Json(false), str, idx);
+            return parseLiteral("false", Json(false), str, idx);
         }
         else if(str[idx] == '\"')
         {
-            return ParseString(str, idx);
+            return parseString(str, idx);
         }
         else if(str[idx] == '[')
         {
-            return ParseArray(str, ++idx);
+            return parseArray(str, ++idx, ++depth);
         }
         else if(str[idx] == '{')
         {
-            return ParseObject(str, ++idx);
+            return parseObject(str, ++idx, ++depth);
         }
         else
         {
-            return ParseNumber(str, idx);
+            return parseNumber(str, idx);
         }
     }
     
-    Json Parse(const std::string & in)
+    Json parse(const std::string & in)
     {
         size_t idx = 0;
-        return ParseJson(in, idx);
+        size_t depth = 0;
+        return parseJson(in, idx, depth);
     }
     //parse
-
-    //Dump
-    void Json::Dump(std::string &out) const 
-    { 
-        m_ptr->Dump(out);
-    }
-    //JsonNull
-    template<>
-    void Value<JsonType::NUL, NullClass>::Dump(std::string &out) const 
-    {
-        out += "null";
-    }
-    //JsonBool
-    template<>
-    void Value<JsonType::BOOL, bool>::Dump(std::string &out) const 
-    {
-        out += (m_value ? "true" : "false");
-    }
-    //JsonNumber
-    template<>
-    void Value<JsonType::NUMBER, double>::Dump(std::string &out) const 
-    {
-        out += std::to_string(m_value);
-    }
-    //JsonString
-    template<>
-    void Value<JsonType::STRING, std::string>::Dump(std::string &out) const 
-    {
-        out += "\"" + m_value + "\"";
-    }
-    // JsonArray
-    template<>
-    void Value<JsonType::ARRAY, array>::Dump(std::string &out) const 
-    {
-        out += '[';
-        bool first = true;
-        for (const auto& item : m_value)
-        {
-            if (!first)
-            {
-                out += ",\n";
-            }
-            first = false;
-            item.Dump(out);
-        }
-        out += ']';
-    }
-    // JsonObject
-    template<>
-    void Value<JsonType::OBJECT, object>::Dump(std::string &out) const 
-    {
-        out += "{\n";
-        bool first = true;
-        for (const auto& item : m_value)
-        {
-            if (!first)
-            {
-                out += ",\n";
-            }
-            first = false;
-            out += '\t' + item.first + " : ";
-            item.second.Dump(out);
-        }
-        out += "\n}";
-    }
-    //Dump
-
-    //swap
-    void Json::swap(Json &other) noexcept 
-    { 
-        std::swap(m_ptr, other.m_ptr); 
-    }
-    //swap
 }

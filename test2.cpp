@@ -106,11 +106,6 @@ void TestparseNumber(double num, const string jsonStr)
         cerr << "parsing " << jsonStr
         << ", error at position " << ex.getPosition() << ": " << ex.what() << endl;
     }
-    catch(...)
-    {
-        cerr << "parsing error in " << jsonStr << endl;
-    }
-
     count++;
 }
 
@@ -228,11 +223,11 @@ void TestLiteral()
 
 void Testparse()
 {
-    TestLiteral();
-    TestNumber();
+    //TestLiteral();
+    //TestNumber();
     //TestString();
     //TestArray();
-    //TestObject();
+    TestObject();
 
     //TestparseWrong();
 }
@@ -305,8 +300,8 @@ void TestOther()
 
 int main()
 {
-    Testparse();
-    cout << "success :" << succ << " total :" << count << endl;
+    //Testparse();
+    //cout << "success :" << succ << " total :" << count << endl;
     //TestOther();
-    //TestSet();
+    TestSet();
 }
