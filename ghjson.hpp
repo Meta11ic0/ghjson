@@ -16,6 +16,10 @@ namespace ghjson
     
     using array = std::vector<Json>;
     using object = std::map<std::string, Json>;
+    using arrayiter = array::iterator;
+    using const_arrayiter = array::const_iterator;
+    using objectiter = object::iterator;
+    using const_objectiter = object::const_iterator;
 
     class ghJsonException : public std::runtime_error 
     {
@@ -39,15 +43,15 @@ namespace ghjson
             virtual JsonType type() const = 0;
             //type
             //comparisons
-            virtual bool equals(const JsonValue * other) const = 0 ;
-            virtual bool less(const JsonValue * other) const = 0 ;
+            virtual bool equals(const JsonValue * other) const = 0;
+            virtual bool less(const JsonValue * other) const  = 0;
             //comparisons
             //getvalue
-            virtual double              getNumber() const  = 0;
-            virtual bool                getBool  () const  = 0;
-            virtual const std::string & getString() const  = 0;
-            virtual const array &       getArray () const  = 0;
-            virtual const object &      getObject() const  = 0;
+            virtual double              getNumber() const = 0;
+            virtual bool                getBool  () const = 0;
+            virtual const std::string & getString() const = 0;
+            virtual const array &       getArray () const = 0;
+            virtual const object &      getObject() const = 0;
             //getvalue
             //operator[]
             virtual Json& operator[](size_t index)  = 0;
@@ -66,15 +70,24 @@ namespace ghjson
             virtual void addToObject(const std::string & key, const Json & value)  = 0;
 
             virtual void removeFromArray(size_t index)  = 0;
-            virtual void removeFromObject(const std::string& key) = 0;
+            virtual void removeFromObject(const std::string& key)  = 0;
             //setvalue
             //clone
             virtual std::unique_ptr<JsonValue> clone() const = 0;
             //clone
             //dump
-            virtual void dump(std::string & str) const = 0;
+            virtual void dump(std::string & str, size_t depth) const = 0;
             //dump
-
+            //iterator
+            virtual arrayiter arrayBegin() = 0;
+            virtual const_arrayiter arrayBegin_const() const = 0;
+            virtual arrayiter arrayEnd() = 0;
+            virtual const_arrayiter arrayEnd_const() const = 0;
+            virtual objectiter objectBegin() = 0;
+            virtual const_objectiter objectBegin_const() const = 0;
+            virtual objectiter objectEnd() = 0;
+            virtual const_objectiter objectEnd_const() const = 0;
+            //iterator
             virtual ~JsonValue() noexcept {} ;
     };
 
@@ -105,7 +118,6 @@ namespace ghjson
             
             ~Json() noexcept {};
             //constructor
-
             //type
             JsonType type() const;
             bool is_null()   const;
@@ -115,7 +127,6 @@ namespace ghjson
             bool is_array()  const;
             bool is_object() const;
             //type
-
             //getValue
             double              getNumber() const;
             bool                getBool()   const;
@@ -123,14 +134,12 @@ namespace ghjson
             const array &       getArray()  const;
             const object &      getObject() const;
             //getValue
-
             //operator[]
             Json & operator[](size_t index);
             Json & operator[](const std::string &key);
             const Json & operator[](size_t index) const ; 
             const Json & operator[](const std::string &key) const;
             //operator[]
-
             //setValue
             void setNumber (double               value);
             void setBool   (bool                 value);
@@ -144,7 +153,6 @@ namespace ghjson
             void removeFromArray(size_t index) ;
             void removeFromObject(const std::string& key);
             //setValue
-
             //comparisons
             bool operator== (const Json &rhs) const;
             bool operator<  (const Json &rhs) const;
@@ -153,17 +161,10 @@ namespace ghjson
             bool operator>  (const Json &rhs) const { return  (rhs < *this); }
             bool operator>= (const Json &rhs) const { return !(*this < rhs); }  
             //comparisons
-
             //dump
-            void dump(std::string & str) const;
-            inline const std::string dump()
-            {
-                std::string str;
-                dump(str);
-                return str;
-            }
+            void dump(std::string & str, size_t depth) const;
+            const std::string dump() const;
             //dump
-
             //check
             inline void check() const
             {
@@ -173,6 +174,16 @@ namespace ghjson
                 } 
             }
             //check
+            //iterator
+            arrayiter arrayBegin();
+            const_arrayiter arrayBegin_const() const ;
+            arrayiter arrayEnd();
+            const_arrayiter arrayEnd_const() const ;
+            objectiter objectBegin();
+            const_objectiter objectBegin_const() const ;
+            objectiter objectEnd();
+            const_objectiter objectEnd_const() const ;
+            //iterator
     };
 
     Json parse(const std::string & in);

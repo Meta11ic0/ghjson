@@ -2,7 +2,6 @@
 
 namespace ghjson
 {
-
     template<JsonType tag, typename T>
     class Value : public JsonValue
     {
@@ -15,39 +14,46 @@ namespace ghjson
             //type
             JsonType type() const override { return tag; }
             //type
-            //comparisons
-            bool equals(const JsonValue * other) const { return m_value == static_cast<const Value<tag, T> *>(other)->m_value; }
-            bool less(const JsonValue * other) const { return m_value < static_cast<const Value<tag, T> *>(other)->m_value; }
-            //comparisons
-
-                        //getvalue
-            virtual double              getNumber() const { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
-            virtual bool                getBool  () const { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
-            virtual const std::string & getString() const { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
-            virtual const array &       getArray () const { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
-            virtual const object &      getObject() const { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
             //getvalue
-
+            double              getNumber() const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            bool                getBool  () const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            const std::string & getString() const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            const array &       getArray () const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            const object &      getObject() const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            //getvalue
             //operator[]
-            virtual Json& operator[](size_t index) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
-            virtual Json& operator[](const std::string& key) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
-            virtual const Json& operator[](size_t index) const  { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
-            virtual const Json& operator[](const std::string& key) const { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            Json& operator[](size_t index) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            Json& operator[](const std::string& key) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            const Json& operator[](size_t index) const  override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            const Json& operator[](const std::string& key) const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
             //operator[]
-            
             //setvalue
-            virtual void setNumber (double               value) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
-            virtual void setBool   (bool                 value) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
-            virtual void setString (const  std::string & value) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
-            virtual void setArray  (const  array       & value) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
-            virtual void setObject (const  object      & value) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            void setNumber (double               value) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            void setBool   (bool                 value) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            void setString (const  std::string & value) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            void setArray  (const  array       & value) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            void setObject (const  object      & value) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
 
-            virtual void addToArray (const Json & value) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
-            virtual void addToObject(const std::string & key, const Json & value) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            void addToArray (const Json & value) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            void addToObject(const std::string & key, const Json & value) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
 
-            virtual void removeFromArray(size_t index) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
-            virtual void removeFromObject(const std::string& key) { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            void removeFromArray(size_t index) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            void removeFromObject(const std::string& key) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
             //setvalue
+            //iterator
+            arrayiter arrayBegin() override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); };
+            const_arrayiter arrayBegin_const() const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); };
+            arrayiter arrayEnd() override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); };
+            const_arrayiter arrayEnd_const() const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); };
+            objectiter objectBegin() override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); };
+            const_objectiter objectBegin_const() const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); };
+            objectiter objectEnd() override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); };
+            const_objectiter objectEnd_const() const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); };
+            //iterator
+            //comparisons
+            bool equals(const JsonValue * other) const override { return m_value == static_cast<const Value<tag, T> *>(other)->m_value; }
+            bool less(const JsonValue * other) const  override { return m_value < static_cast<const Value<tag, T> *>(other)->m_value; }
+            //comparisons
     };
 
     class NullClass
@@ -64,7 +70,7 @@ namespace ghjson
             //clone
             virtual std::unique_ptr<JsonValue> clone() const override{ return std::make_unique<JsonNull>(); }
             //clone
-            void dump(std::string &out) const { out += "null"; }
+            void dump(std::string &out, size_t depth) const { out += "null"; }
     };
 
     class JsonBool : public Value<JsonType::BOOL, bool>
@@ -82,7 +88,7 @@ namespace ghjson
             virtual std::unique_ptr<JsonValue> clone() const override{ return std::make_unique<JsonBool>(m_value); }
             //clone
             //dump
-            void dump(std::string &out) const { out += (m_value ? "true" : "false"); }
+            void dump(std::string &out, size_t depth) const { out += (m_value ? "true" : "false"); }
             //dump
     };
 
@@ -101,7 +107,7 @@ namespace ghjson
             virtual std::unique_ptr<JsonValue> clone() const override{ return std::make_unique<JsonNumber>(m_value); }
             //clone
             //dump
-            void dump(std::string &out) const { out += std::to_string(m_value); }
+            void dump(std::string &out, size_t depth) const { out += std::to_string(m_value); }
             //dump
     };
 
@@ -121,7 +127,7 @@ namespace ghjson
             virtual std::unique_ptr<JsonValue> clone() const override{ return std::make_unique<JsonString>(m_value); }
             //clone
             //dump
-            void dump(std::string &out) const { out += "\"" + m_value + "\""; }
+            void dump(std::string &out, size_t depth) const { out += "\"" + m_value + "\""; }
             //dump
     };
 
@@ -177,7 +183,7 @@ namespace ghjson
             virtual std::unique_ptr<JsonValue> clone() const override{ return std::make_unique<JsonArray>(m_value); }
             //clone
             //dump
-            void dump(std::string &out) const 
+            void dump(std::string &out, size_t depth) const 
             {
                 out += '[';
                 bool first = true;
@@ -185,14 +191,20 @@ namespace ghjson
                 {
                     if (!first)
                     {
-                        out += ",\n";
+                        out += ", ";
                     }
                     first = false;
-                    item.dump(out);
+                    item.dump(out, depth+1);
                 }
                 out += ']';
             }
             //dump
+            //iterator
+            arrayiter arrayBegin() override {  return m_value.begin(); }
+            const_arrayiter arrayBegin_const() const override { return m_value.cbegin();}
+            arrayiter arrayEnd() override {  return m_value.end(); }
+            const_arrayiter arrayEnd_const() const override { return m_value.cend();}
+            //iterator
     };
 
     class JsonObject : public Value<JsonType::OBJECT, object>
@@ -235,23 +247,38 @@ namespace ghjson
             virtual std::unique_ptr<JsonValue> clone() const override{ return std::make_unique<JsonObject>(m_value); }
             //clone
             //dump
-            void dump(std::string &out) const 
+            void dump(std::string &out, size_t depth) const 
             {
-                out += "{\n";
                 bool first = true;
                 for (const auto& item : m_value)
                 {
+                    
                     if (!first)
                     {
                         out += ",\n";
+                        for(size_t i = 0; i < depth; i++)
+                        {
+                            out+='\t';
+                        }
+                    }
+                    else
+                    {
+                        out+= '{';
                     }
                     first = false;
-                    out += '\t' + item.first + " : ";
-                    item.second.dump(out);
+                    
+                    out += item.first + " : ";
+                    item.second.dump(out, depth+1);
                 }
-                out += "\n}";
+                out += '}';
             }
             //dump
+            //iterator
+            objectiter objectBegin() override {  return m_value.begin(); }
+            const_objectiter objectBegin_const() const override{ return m_value.cbegin();}
+            objectiter objectEnd() override {  return m_value.end(); }
+            const_objectiter objectEnd_const() const override{ return m_value.cend();}
+            //iterator
     };
     //JsonValue
 
@@ -346,7 +373,29 @@ namespace ghjson
     }
     //operator==
     //dump
-    void Json::dump(std::string &out) const { check();m_ptr->dump(out); }
+    const std::string Json::dump() const
+    {
+        std::string str;
+        size_t depth = 0;
+        dump(str, depth);
+        return str;
+    }
+    void Json::dump(std::string &out, size_t depth) const 
+    { 
+        check();
+        m_ptr->dump(out, depth); 
+    }
+    //dump
+    //iterator
+    arrayiter Json::arrayBegin() { check(); return m_ptr->arrayBegin(); }
+    const_arrayiter Json::arrayBegin_const() const { check(); return m_ptr->arrayBegin_const();}
+    arrayiter Json::arrayEnd() { check(); return m_ptr->arrayEnd(); }
+    const_arrayiter Json::arrayEnd_const() const { check(); return m_ptr->arrayEnd_const();}    
+    objectiter Json::objectBegin(){ check(); return m_ptr->objectBegin();}
+    const_objectiter Json::objectBegin_const() const { check(); return m_ptr->objectBegin_const();}
+    objectiter Json::objectEnd(){ check(); return m_ptr->objectEnd();}
+    const_objectiter Json::objectEnd_const() const { check(); return m_ptr->objectEnd_const();}
+    //iterator
     //Json
     //parse
     void checkIndex(const std::string& str, size_t idx) 
@@ -357,7 +406,7 @@ namespace ghjson
         }
     }
 
-    //提前声明为了调用
+    //提前声明
     Json parseJson(const std::string & str, size_t & idx, size_t depth);
     Json parseString(const std::string & str, size_t & idx);
     
@@ -483,91 +532,26 @@ namespace ghjson
         return Json(out);
     }
 
-    /*oldversion
-    bool InRange(long x, long lower, long upper)
-    {
-        return (x >= lower && x <= upper);
-    }
-
-    Json parseNumber(const std::string & str, size_t & idx)
-    {
-
-        size_t start = idx;
-        size_t len = str.length();
-        
-        if(str[idx] == '-')
-        {
-            idx++;
-        }
-
-        if(idx < len && str[idx] == '0')
-        {
-            idx++;
-        }
-        else if(idx < len && InRange(str[idx], '1', '9'))
-        {
-            idx++;
-            while(idx < len && InRange(str[idx], '0', '9'))
-            {
-                idx++;
-            }
-        }
-        else
-        {
-            throw ghJsonException("[ERROR]:wrong number format", idx);
-        }
-
-        if(idx < len && str[idx] == '.')
-        {
-            idx++;
-            if(idx < len && InRange(str[idx], '0', '9'))
-            {
-                idx++;
-            }
-            else
-            {
-                throw ghJsonException("[ERROR]:wrong number format", idx);
-            }
-            
-            while(idx < len && InRange(str[idx], '0', '9'))
-            {
-                idx++;
-            }
-        }
-        
-        if(idx < len && (str[idx] == 'e' || str[idx] == 'E'))
-        {
-            idx++;
-            if(idx < len && (str[idx] == '+' || str[idx] == '-'))
-            {
-                idx++;
-            }
-
-            if(idx < len && InRange(str[idx], '0', '9'))
-            {
-                idx++;
-            }
-            else
-            {
-                throw ghJsonException("[ERROR]:wrong number format", idx);
-            }
-
-            while(idx < len && InRange(str[idx], '0', '9'))
-            {
-                idx++;
-            }
-        }
-
-        return Json(std::strtod(str.c_str() + start, nullptr));
-    }
-    */
     Json parseNumber(const std::string &str, size_t &idx) 
     {
         size_t processed = 0;
-        double value = std::stod(str.substr(idx), &processed);
-        if (processed == 0) {
+        double value = 0.0;
+
+        try
+        {
+            value = std::stod(str.substr(idx), &processed);
+        }
+        catch (const std::invalid_argument&)
+        {
             throw ghJsonException("Invalid number format", idx);
         }
+        catch (const std::out_of_range&)
+        {
+            throw ghJsonException("Number out of range", idx);
+        }
+
+        // If we get here, processed must be more than 0, since otherwise
+        // an exception would have been thrown.
         idx += processed;
         return Json(value);
     }

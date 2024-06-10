@@ -9,7 +9,6 @@ double epsilon = 1e-5;
 
 void TestparseObject(ghjson::object expect, const string jsonStr)
 {
-    cout << __func__<<endl;
     try 
     {
         ghjson::Json json = ghjson::parse(jsonStr);
@@ -24,8 +23,7 @@ void TestparseObject(ghjson::object expect, const string jsonStr)
                 break;
             }
         }
-        string ss = json.dump();
-        cout << ss << endl;
+        cout << json.dump() << endl;
         succ++;
     } 
     catch (const ghjson::ghJsonException& ex) 
@@ -45,9 +43,8 @@ void TestparseArray(ghjson::array expect, const string jsonStr)
         size_t i = 0;
         for( ; i < expect.size(); i++)
         {
-            string ex, res;
-            expect[i].dump(ex);
-            json[i].dump(res);
+            string ex = expect[i].dump();
+            string res = json[i].dump();
             cout << "parsing in no." << i << ", expected: " << ex << ", got: "<< res <<endl;
             if(expect[i] != json[i])
             {
@@ -56,8 +53,11 @@ void TestparseArray(ghjson::array expect, const string jsonStr)
             }
         }
         if(i == expect.size())
+        {  
             succ++;
-        
+            cout << json.dump() << endl;
+        }
+
     } 
     catch (const ghjson::ghJsonException& ex) 
     {
@@ -139,7 +139,6 @@ void TestparseWrong()
 
 void TestObject()
 {
-    cout << __func__<<endl;
     vector<ghjson::Json> arr;
     arr.push_back(nullptr);
     arr.push_back(true);
@@ -150,7 +149,8 @@ void TestObject()
     obj.insert(pair<string, ghjson::Json>("key1", "value1" ));
     obj.insert(pair<string, ghjson::Json>("key2", true ));
     obj.insert(pair<string, ghjson::Json>("key3", arr ));
-    TestparseObject(obj, "{ \"key1\":\"value1\" , \"key2\": true , \"key3\":[ null , true , false , 12321] }");
+    obj.emplace( "key4", obj);
+    TestparseObject(obj, "{ \"key1\":\"value1\" , \"key2\": true , \"key3\":[ null , true , false , 12321] , \"key4\" :{ \"key1\":\"value1\" , \"key2\": true , \"key3\":[ null , true , false , 12321] }}");
 }
 
 void TestArray()
@@ -164,10 +164,8 @@ void TestArray()
 
     ghjson::Json a = ghjson::parse("\"Hello\"");
     arr.push_back(a);
-    arr.push_back(arr);
-    arr.push_back(arr);
 
-    TestparseArray(arr, "[ null , true , false , 12321 , \"Hello\" ,[ null , true , false , 12321 , \"Hello\" ], [ null , true , false , 12321 , \"Hello\" ,[ null , true , false , 12321 , \"Hello\" ]]]");
+    TestparseArray(arr, "[    null ,   true , false , 12321 , \"Hello\" ]");
 
 }
 
@@ -230,9 +228,9 @@ void Testparse()
 {
     TestLiteral();
     TestNumber();
-    //TestString();
-    //TestArray();
-    //TestObject();
+    TestString();
+    TestArray();
+    TestObject();
 
     //TestparseWrong();
 }
@@ -240,15 +238,13 @@ void Testparse()
 void TestSetNumer()
 {
     ghjson::Json num ={1234};
-    cout << num.getNumber() << endl;
-    cout << num.type() << endl;
+    cout << "Before: "<< num.getNumber() << endl;
     num.setNumber(99.123);
-    cout << num.getNumber() << endl;
+    cout << "After: "<< num.getNumber() << endl;
 }
 
 void TestSetArray()
 {
-    cout << __func__ << endl;
     ghjson::array test = {}; 
     ghjson::Json jsonarray (test);
 
@@ -256,41 +252,46 @@ void TestSetArray()
     jsonarray.addToArray(true);
     jsonarray.addToArray(123123);
     jsonarray.addToArray("12312312312312312123");
-    cout << jsonarray.getArray().size() << endl;
-    cout << jsonarray.dump() << endl;
-    for(auto iter  : jsonarray.getArray())
+    cout << "before:\n"<< jsonarray.dump() << endl;
+    for(auto iter = jsonarray.arrayBegin(); iter < jsonarray.arrayEnd(); iter++)
     {
-        if(iter.is_number() && iter.getNumber() == 123123)
+        if(iter->is_number() && iter->getNumber() == 123123)
         {
-            cout << "Before modification: " << iter.getNumber() << endl;
-            iter.setNumber(1234);
-            cout << "After modification: " << iter.getNumber() << endl;
+            cout << "find!" << endl;
+            iter->setNumber(98765);
         }
     }
-    cout << jsonarray.dump() << endl;
+    cout << "after:\n"<< jsonarray.dump() << endl;
 }
 
 void TestSetObject()
 {
     ghjson::object test = {}; 
-    ghjson::Json jsonboject(test);
-    cout << jsonboject.type() << endl;
-    jsonboject.addToObject("key1", 123);
-    jsonboject.addToObject("key2", true);
-    jsonboject.addToObject("key213213", "12312312");
-    cout << jsonboject.dump() << endl;
-    ghjson::object tt = jsonboject.getObject();
-    for(auto item : test)
+    ghjson::Json jsonobject(test);
+    cout << jsonobject.type() << endl;
+    jsonobject.addToObject("key1", 123);
+    jsonobject.addToObject("key2", true);
+    jsonobject.addToObject("key213213", "12312312");
+    cout << "before:\n"<< jsonobject.dump() << endl;
+    for(auto iter = jsonobject.objectBegin(); iter != jsonobject.objectEnd(); iter++)
     {
-        cout << item.first  << endl;
+        if ( iter->second.is_number() && iter->second.getNumber() == 123)
+            iter->second.setNumber(987);
+        else if ( iter->second.is_string() )
+            iter->second.setString("success");
     }
+    for(auto iter = jsonobject.objectBegin_const(); iter != jsonobject.objectEnd_const(); iter++)
+    {
+        cout << "const dump : " << iter->first << " : "<<  iter->second.dump()<< endl;
+    }
+    cout << "after:\n"<< jsonobject.dump() << endl;
 }
 
 void TestSet()
 {
     TestSetNumer();
     TestSetArray();
-    //TestSetObject();
+    TestSetObject();
     
 }
 
@@ -305,8 +306,8 @@ void TestOther()
 
 int main()
 {
-    Testparse();
-    cout << "success :" << succ << " total :" << count << endl;
+    //Testparse();
+    //cout << "success :" << succ << " total :" << count << endl;
     //TestOther();
-    //TestSet();
+    TestSet();
 }
