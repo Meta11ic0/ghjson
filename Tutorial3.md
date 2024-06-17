@@ -16,10 +16,16 @@ std::string str = "{\"name\": \"Jane Doe\",\"age\": 30,\"address\": {\"street\":
 
 在上述示例中，我们已经正确地进行了转义处理。
 
-## parse
 我相信解析的基础逻辑都应该很容易想到，根据传进来的字符串的首个字符进行判断即可。但因为NUMBER类型没固定首字符，所以我们将无法匹配的都扔到解析数字的部分中。而且有两个特别要注意的点，第一，array和object都是可能有嵌套得，所以我们传入的参数除了待解析的字符串以外，还需要一个解析开始的位置；第二，传入的字符串需要将无效的字符串去掉。
 
 ~~~c++
+    Json parse(const std::string & in)
+    {
+        size_t idx = 0;
+        size_t depth = 0;
+        return parseJson(in, idx, depth);
+    }
+
     void checkIndex(const std::string& str, size_t idx) 
     {
         if (idx >= str.size()) 
@@ -243,3 +249,46 @@ std::string str = "{\"name\": \"Jane Doe\",\"age\": 30,\"address\": {\"street\":
     }
 ~~~
 
+如果能已经理解并且完成上述步骤，我觉得这个函数的编写应该很容易，就是要在每个具体的json类中实现自己的部分，举例
+
+~~~c++
+    const std::string Json::dump() const
+    {
+        std::string str;
+        size_t depth = 0;
+        dump(str, depth);
+        return str;
+    }
+
+    void Json::dump(std::string &out, size_t depth) const 
+    { 
+        check();
+        m_ptr->dump(out, depth); 
+    }
+
+    class JsonNull : public Value<JsonType::NUL, NullClass>
+    {
+        //..
+        void dump(std::string &out, size_t depth) const { out += "null"; }
+    };
+    class JsonArray : public Value<JsonType::ARRAY, array>
+    {
+        //..
+        void dump(std::string &out, size_t depth) const 
+        {
+            out += '[';
+            bool first = true;
+            for (const auto& item : m_value)
+            {
+                if (!first)
+                {
+                    out += ", ";
+                }
+                first = false;
+                item.dump(out, depth+1);
+            }
+            out += ']';
+        }
+    };
+
+~~~
