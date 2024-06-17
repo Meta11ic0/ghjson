@@ -1,247 +1,280 @@
 # 从一开始搭建json库教程（二）
 
-## class JsonValue的派生类
-上一章定义了基类class JsonValue，定义了中间层class Value，现在先来实现各个JSON类型对应的派生类。但我们先考虑一个事情，其中JSON类型为NUL的对象，我们没有在C++可以直接使用的数据类型，如果使用nullptr的话代码也不好统一，而且nullptr也无法进行比较操作。
+## 完善细节
 
-~~~cpp
-    //..
-    if(nullptr1 < nullptr2) //报错
-    //..
-~~~
+紧接上一章末尾，要考虑一个问题了，各个Json类型分别用什么来实现呢？在实例化模板的时候，**T**分别都是什么呢？NUMBER用double1，STRING用string，BOOOL用bool，ARRAY其实我们很容易想到可以使用vector<Json>来实现，OBJECT的话是map<string, Json>，那么NULL呢？起码我暂时想不到对应的，那么我就自己造一个，然后各个派生类的代码基础就出来了。同时我们定义一个异常类，用于抛出我们这个库的异常信息。
 
-所以我们我们实现一个NUllClass，里面只实现我们需要的内容就好。
-
-~~~cpp
-    class NullClass
+~~~c++
+    class ghJsonException : public std::runtime_error 
     {
         public:
-            bool operator == (NullClass) { return true; }
-            bool operator < (NullClass) { return false; }
-    };
-~~~
-
-现在每个派生类的实现就很容易了
-
-~~~cpp
-    class JsonNull final : public Value<JsonType::NUL, NullClass>
-    {
-        public:
-            JsonNull() : Value({}) {};
-    };
-
-    class JsonNumber final : public Value<JsonType::NUMBER, double>
-    {
-        public:
-            explicit JsonNumber(int value) : Value(value) {}
+            ghJsonException(const std::string& message, size_t position): std::runtime_error(message), pos(position) {}
+            size_t getPosition() const { return pos; }
         private:
-            double GetNumber() const override { return m_value; }
+            size_t pos;
     };
 
-    class JsonBool final : public Value<JsonType::BOOL, bool>
+    class JsonNull : public Value<JsonType::NUL, NullClass>
     {
         public:
-            explicit JsonBool(bool value) : Value(value) {}
-        private:
-            bool GetBool() const override { return m_value; }
+            explicit JsonNull() : Value(NullClass()) {};
     };
 
-    class JsonString final : public Value<JsonType::STRING, std::string>
+    class JsonBool : public Value<JsonType::BOOL, bool>
+    {
+        public:
+            explicit JsonBool(bool value) : Value(value) {};
+        private:
+            //getValue
+            bool getBool() const override { return m_value; }
+            //getValue
+            //setvalue
+            void setBool (bool value) override { m_value = value; }
+            //setvalue
+    };
+
+    class JsonNumber : public Value<JsonType::NUMBER, double>
+    {
+        public:
+            explicit JsonNumber(double value) : Value(value) {};
+        private:
+            //getValue
+            double getNumber() const override { return m_value; }
+            //getValue
+            //setvalue
+            void setNumber(double value) override { m_value = value; }
+            //setvalue
+    };
+
+    class JsonString : public Value<JsonType::STRING, std::string>
     {
         public:
             explicit JsonString(const std::string& value) : Value(value) {}
             explicit JsonString(std::string&& value) : Value(move(value)) {}
         private:
-            const std::string& GetString() const override { return m_value; }
-
+            //getValue
+            const std::string & getString() const override { return m_value; }
+            //getValue
+            //setvalue
+            void setString (const std::string & value) override { m_value = value; }
+            //setvalue
     };
 
-    class JsonArray final : public Value<JsonType::ARRAY, array>
+    class JsonArray : public Value<JsonType::ARRAY, array>
     {
         public:
             explicit JsonArray(const array& value) : Value(value) {};
-            explicit JsonArray(array&& value) : Value(move(value)) {};
+            explicit JsonArray(array&& value) : Value(move(value)) {};        
         private:
-            const array& GetArray() const override { return m_value; }
-            const Json& operator[](size_t i) const;
+            //getValue
+            const array & getArray() const override { return m_value; }
+            //getValue
+            //setvalue
+            void setArray (const array & value) override { m_value = value; }
+            void addToArray (const Json & value) override{ m_value.emplace_back(value);}
+            void removeFromArray (size_t index) override
+            {
+                if (index < m_value.size()) 
+                {
+                    m_value.erase(m_value.begin() + index);
+                }
+                else
+                {
+                    throw ghJsonException(std::string(__func__) + "index out of range!", 0);
+                }
+            }
+            //setvalue
+            //iterator
+            arrayiter arrayBegin() override {  return m_value.begin(); }
+            const_arrayiter arrayBegin_const() const override { return m_value.cbegin();}
+            arrayiter arrayEnd() override {  return m_value.end(); }
+            const_arrayiter arrayEnd_const() const override { return m_value.cend();}
+            //iterator
     };
 
-    class JsonObject final : public Value<JsonType::OBJECT, object>
+    class JsonObject : public Value<JsonType::OBJECT, object>
     {
         public:
             explicit JsonObject(const object& value) : Value(value) {};
             explicit JsonObject(object&& value) : Value(move(value)) {};
         private:
-            const object& GetObject() const override { return m_value; }
-            const Json& operator[](const std::string& key) const;
+            //getValue
+            const object & getObject() const override { return m_value; }
+            //getValue
+            //setvalue
+            void setObject (const object & value) override { m_value = value; }
+            void addToObject(const std::string & key, const Json & value){ m_value[key] = value; }
+            void removeFromObject (const std::string& key) override
+            {
+                auto iter = m_value.find(key);
+                if(iter == m_value.end())
+                {
+                    throw ghJsonException(std::string(__func__) + " key :[" + key + "] not exits! ", 0);
+                }
+                else
+                    m_value.erase(iter);
+            }
+            //setvalue
+            //iterator
+            objectiter objectBegin() override {  return m_value.begin(); }
+            const_objectiter objectBegin_const() const override{ return m_value.cbegin();}
+            objectiter objectEnd() override {  return m_value.end(); }
+            const_objectiter objectEnd_const() const override{ return m_value.cend();}
+            //iterator
     };
-~~~
-
-现在我们有了基础的代码框架，接下来就是各种声明过了函数的实现。我们先来实现取值函数。正如我们一开始的时候提到的，为了省去类型检查的工作，我们对没有正确使用的对应类型的取值返回默认值。
-
-## 默认值的设置
-
-我们返回的默认值在整个程序运行过程中都应该是不变的，不能被修改的。所以只需在内存中分配一次，之后可以重复使用，而不需要每次调用函数时都重新创建这些空的容器。
-
-~~~cpp
-    class DefalutValue
-    {
-        public:
-            const shared_ptr<JsonValue> null = make_shared<JsonNull>();
-            const shared_ptr<JsonValue> t    = make_shared<JsonBool>(true);
-            const shared_ptr<JsonValue> f    = make_shared<JsonBool>(false);
-            const std::string                  empty_string;
-            const array                        empty_vector;
-            const object                       empty_map;
-            DefalutValue(){};       
-    };
-
-    static const DefalutValue & GetDefaultValue()
-    {
-        static const DefalutValue d{};
-        return d;
-    };
-~~~
-
-然后对于取值函数的非特化实现
-
-~~~cpp
-    //..
-    //Json
-    double              Json::GetNumber() const { return m_ptr->GetNumber(); }
-    bool                Json::GetBool()   const { return m_ptr->GetBool();   }
-    const std::string & Json::GetString() const { return m_ptr->GetString(); }
-    const array &       Json::GetArray()  const { return m_ptr->GetArray();  }
-    const object &      Json::GetObject() const { return m_ptr->GetObject(); }
     //JsonValue
-    double              JsonValue::GetNumber() const { return 0;                                  }
-    bool                JsonValue::GetBool()   const { return false;                              }
-    const std::string & JsonValue::GetString() const { return GetDefaultValue().empty_string; }
-    const array &       JsonValue::GetArray()  const { return GetDefaultValue().empty_vector; }
-    const object &      JsonValue::GetObject() const { return GetDefaultValue().empty_map;    }
-    //..
 ~~~
 
-但注意到，对于ARRAY和OBJECT来说，他们n的operator[]特化还没实现。这两个类别的operator[]都遵循一个逻辑，要判断合法性，不合法是返回默认值，这里的这个默认值类型为Json而不是JsonValue，我们如法炮制定义一个JSON类型为NULL的局部静态变量。
+此时一开始设置的接口，现在可以开始实现了。
 
-~~~cpp
-    //..
-    static const Json & GetJsonNull()
+~~~C++
+    //Json
+    //type
+    JsonType Json::type()      const { return m_ptr->type();              }
+    bool     Json::is_null()   const { return type() == JsonType::NUL;    }
+    bool     Json::is_number() const { return type() == JsonType::NUMBER; }
+    bool     Json::is_bool()   const { return type() == JsonType::BOOL;   }
+    bool     Json::is_string() const { return type() == JsonType::STRING; }
+    bool     Json::is_array()  const { return type() == JsonType::ARRAY;  }
+    bool     Json::is_object() const { return type() == JsonType::OBJECT; }
+    //type
+    //getValue
+    double Json::getNumber() const { return m_ptr->getNumber(); }
+    bool Json::getBool() const { return m_ptr->getBool(); }
+    const std::string & Json::getString() const { return m_ptr->getString(); }
+    const array & Json::getArray()  const { return m_ptr->getArray(); }
+    const object & Json::getObject() const { return m_ptr->getObject(); }
+    //getValue
+    //setValue
+    void Json::setNumber(double value) { return m_ptr->setNumber(value); }
+    void Json::setBool(bool value) { return m_ptr->setBool(value); }
+    void Json::setString(const std::string & value) { return m_ptr->setString(value); }
+    void Json::setArray(const array & value) { return m_ptr->setArray(value); }
+    void Json::setObject(const object & value) { return m_ptr->setObject(value); }
+
+    void Json::addToArray (const Json & value) { return m_ptr->addToArray(value); }
+    void Json::addToObject(const std::string & key, const Json & value) { return m_ptr->addToObject(key, value); }
+    void Json::removeFromArray(size_t index) { return m_ptr->removeFromArray(index); }
+    void Json::removeFromObject(const std::string& key) { return m_ptr->removeFromObject(key); }
+    //setValue
+    //Json
+~~~
+
+现在假设一个场景，一个Json对象 test，类型为JsonString，但对其使用getBool()的方法，应该怎么处理呢？我想得到就有两种方法：第一种是对类型不匹配的都返回默认值，第二种是直接抛出异常，我们来实现第二种。
+
+~~~c++
+    const char * ToString(ghjson::JsonType type)
     {
-        static const Json jsonnull; //会调用Json()，从而要使用GetDefaultValue().null，所以将Json默认值跟JsonValue默认值分隔开，不然会有循环依赖
-        return d;
+        switch (type) 
+        {
+            case ghjson::JsonType::NUL:    return "null";
+            case ghjson::JsonType::NUMBER: return "number";
+            case ghjson::JsonType::BOOL:   return "bool";
+            case ghjson::JsonType::STRING: return "string";
+            case ghjson::JsonType::ARRAY:  return "array";
+            case ghjson::JsonType::OBJECT: return "object";
+            default:                       return "unknown";
+        }
     }
-    //..
-    //operator[]
-    const Json & Json::operator[] (size_t i)          const { return (*m_ptr)[i];           }
-    const Json & Json::operator[] (const string &key) const { return (*m_ptr)[key];         }
-    const Json & JsonValue::operator[] (size_t)         const { return GetJsonNull(); }
-    const Json & JsonValue::operator[] (const string &) const { return GetJsonNull(); }
-    //特化的operator[]
-    const Json & JsonArray::operator[] (size_t i) const 
-    { 
-        return (i > m_value.size() ? GetJsonNull() : m_value[i]);
-    }
-    const Json & JsonObject::operator[] (const string & key) const 
-    { 
-        auto iter = m_value.find(key);
-        return (iter == m_value.end() ? GetJsonNull() : iter->second); //这里不能使用m_value[key],因为m_value是const对象，这个函数也是const函数，而m_value[key]是会在key不存在的时候新建一个值，所以编译器会报错
-    }
-~~~
 
-## 比较的实现
-
-因为在Json类的实例对象中，没法直接调用成员变量m_ptr的成员m_value，所以在JsonValue类中再声明成员函数equals和less。
-
-~~~cpp
     class JsonValue
     {
-        //..
-        virtual bool equals(const JsonValue * other) const = 0;
-        virtual bool less(const JsonValue * other) const = 0;
-        //..
-    }
+        public:
+            //type
+            virtual JsonType type() const = 0;
+            //type
+            //getvalue
+            virtual double              getNumber() const = 0;
+            virtual bool                getBool  () const = 0;
+            virtual const std::string & getString() const = 0;
+            //getvalue
+            //setvalue
+            virtual void setNumber (double               value)  = 0;
+            virtual void setBool   (bool                 value)  = 0;
+            virtual void setString (const  std::string & value)  = 0;
+            virtual void setArray  (const  array       & value)  = 0;
+            virtual void setObject (const  object      & value)  = 0;
 
-    template <JsonType tag, typename T>
+            virtual void addToArray (const Json & value)  = 0;
+            virtual void addToObject(const std::string & key, const Json & value)  = 0;
+            virtual void removeFromArray(size_t index)  = 0;
+            virtual void removeFromObject(const std::string& key)  = 0;
+            //setvalue
+            //iterator
+            virtual arrayiter arrayBegin() = 0;
+            virtual const_arrayiter arrayBegin_const() const = 0;
+            virtual arrayiter arrayEnd() = 0;
+            virtual const_arrayiter arrayEnd_const() const = 0;
+            virtual objectiter objectBegin() = 0;
+            virtual const_objectiter objectBegin_const() const = 0;
+            virtual objectiter objectEnd() = 0;
+            virtual const_objectiter objectEnd_const() const = 0;
+            //iterator
+            virtual ~JsonValue() noexcept {} ;
+    };
+
+    template<JsonType tag, typename T>
     class Value : public JsonValue
     {
-        //..
         protected:
-            // Comparisons
-            bool equals(const JsonValue * other) const {
-                return m_value == static_cast<const Value<tag, T> *>(other)->m_value;
-            }
-            bool less(const JsonValue * other) const {
-                return m_value < static_cast<const Value<tag, T> *>(other)->m_value;
-            }
-        //..
+            T m_value;
+            //constructor
+            explicit Value(const T &value) : m_value(value) {}
+            explicit Value(T &&value)      : m_value(std::move(value)) {}
+            //constructor
+            //type
+            JsonType type() const override { return tag; }
+            //type
+            //getvalue
+            double getNumber() const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            bool getBool  () const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            const std::string & getString() const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            const array & getArray () const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            const object &      getObject() const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            //getvalue
+            //setvalue
+            void setNumber (double               value) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            void setBool   (bool                 value) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            void setString (const  std::string & value) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            void setArray  (const  array       & value) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            void setObject (const  object      & value) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+
+            void addToArray (const Json & value) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            void addToObject(const std::string & key, const Json & value) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            void removeFromArray(size_t index) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            void removeFromObject(const std::string& key) override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); }
+            //setvalue
+            //iterator
+            arrayiter arrayBegin() override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); };
+            const_arrayiter arrayBegin_const() const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); };
+            arrayiter arrayEnd() override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); };
+            const_arrayiter arrayEnd_const() const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); };
+            objectiter objectBegin() override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); };
+            const_objectiter objectBegin_const() const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); };
+            objectiter objectEnd() override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); };
+            const_objectiter objectEnd_const() const override { throw ghJsonException("Invalid type:  Attempted to call " + std::string(__func__) + " on a JsonValue of type " + ToString(type()), 0); };
+            //iterator
     };
-    bool Json::operator== (const Json &rhs) const
-    {
-        if(m_ptr == rhs.m_ptr)
-            return true;
-        else if(m_ptr->Type() != rhs.Type())
-            return false;
-        
-        //没法直接return m_ptr->m_value == rhs.m_value;
-        return m_ptr->equals(rhs.m_ptr->get());
-    }
-
-    bool Json::operator<  (const Json &rhs) const
-    {
-        if (m_ptr == rhs.m_ptr)
-            return false;
-        if (m_ptr->Type() != rhs.m_ptr->Type())
-            return m_ptr->Type() < rhs.m_ptr->Type();
-
-        return m_ptr->less(rhs.m_ptr.get());
-    }
 ~~~
 
-只要实现了上面相等和小于，其他的比较操作就能通过调用来这两个函数实现
+我们用于存放数据的部分已经完成得差不多了，再补充一下class Json的构造函数。
 
-~~~cpp
+~~~c++
     class Json
     {
-        public:
-        //..
-            bool operator!= (const Json &rhs) const { return !(*this == rhs); }
-            bool operator<= (const Json &rhs) const { return !(rhs < *this); }
-            bool operator>  (const Json &rhs) const { return  (rhs < *this); }
-            bool operator>= (const Json &rhs) const { return !(*this < rhs); }
-        //..
+            //..
+            Json() noexcept;                // NUL
+            Json(std::nullptr_t) noexcept;  // NUL
+            Json(int value);             // NUMBER
+            Json(double value);             // NUMBER
+            Json(bool value);               // BOOL
+            Json(const std::string &value); // STRING
+            Json(std::string &&value);      // STRING
+            Json(const char * value);       // STRING
+            Json(const array &values);      // ARRAY
+            Json(array &&values);           // ARRAY
+            Json(const object &values);     // OBJECT
+            Json(object &&values);          // OBJECT
+            //..
     }
-~~~
-
-目前为止，我们已经将需要在代码中使用的json数据结构搭建的差不多了，可能还差一些各式各样的对应的构造函数
-
-~~~cpp
-    //..
-    //Constructors
-    //因为设置了一个JSON类型为NULL的局部静态变量，所以这里可以实现没有入参的或者入参为空值的Json构造函数
-    Json::Json() noexcept                : m_ptr(GetDefaultValue().null) {}
-    Json::Json(std::nullptr_t) noexcept  : m_ptr(GetDefaultValue().null) {}
-    Json::Json(double value)             : m_ptr(std::make_shared<JsonNumber>(value)) {}
-    Json::Json(bool value)               : m_ptr(value ? GetDefaultValue().t : GetDefaultValue().f) {}
-    Json::Json(const std::string &value) : m_ptr(std::make_shared<JsonString>(value)) {}
-    Json::Json(std::string &&value)      : m_ptr(std::make_shared<JsonString>(move(value))) {}
-    Json::Json(const char * value)       : m_ptr(std::make_shared<JsonString>(value)) {}
-    Json::Json(const array &values)      : m_ptr(std::make_shared<JsonArray>(values)) {}
-    Json::Json(array &&values)           : m_ptr(std::make_shared<JsonArray>(move(values))) {}
-    Json::Json(const object &values)     : m_ptr(std::make_shared<JsonObject>(values)) {}
-    Json::Json(object &&values)          : m_ptr(std::make_shared<JsonObject>(move(values))) {}
-    //Constructors
-    //..
-~~~
-
-最后还可以加上一些用于判断类型的函数
-
-~~~cpp
-    //..
-    bool is_null()   const { return Type() == JsonType::NUL; }
-    bool is_number() const { return Type() == JsonType::NUMBER; }
-    bool is_bool()   const { return Type() == JsonType::BOOL; }
-    bool is_string() const { return Type() == JsonType::STRING; }
-    bool is_array()  const { return Type() == JsonType::ARRAY; }
-    bool is_object() const { return Type() == JsonType::OBJECT; }
-    //..
 ~~~
