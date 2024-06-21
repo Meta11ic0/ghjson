@@ -120,7 +120,7 @@
 
 ## 细节设计
 
-既然最外层的接口定了，现在我们可以来设计细节。为了结构统一和封装性，我们在class Json中只提供一个指向JsonValue的指针和各种方法。既然如此，我们初步可以想到，在派生类如JsonNumber、JsonString等中进行一部分具体的实现，因为每个具体的Json类型实际存储的值的类型不一样，JsonNumber使用double，JsonString使用标准库的string，返回的Json类型也不一样。
+既然最外层的接口定了，现在我们可以来设计细节。为了结构统一和封装性，我们在class Json中只提供一个指向JsonValue的指针和各种方法。既然如此，我们初步可以想到，因为每个具体的Json类型实际存储的值的类型不一样，JsonNumber使用double，JsonString使用标准库的string，返回的Json类型也不一样，所以可能要到JsonNumber、JsonString等中进行一部分方法具体的实现。
 
 ~~~cpp
     class JsonNumber : public JsonValue
