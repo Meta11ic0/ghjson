@@ -2,7 +2,7 @@
 
 ## 完善细节
 
-紧接上一章末尾，要考虑一个问题了，各个Json类型分别用什么来实现呢？在实例化模板的时候，**T**分别都是什么呢？NUMBER用double1，STRING用string，BOOOL用bool，ARRAY其实我们很容易想到可以使用vector<Json>来实现，OBJECT的话是map<string, Json>，那么NULL呢？起码我暂时想不到对应的，那么我就自己造一个，然后各个派生类的代码基础就出来了。同时我们定义一个异常类，用于抛出我们这个库的异常信息。
+紧接上一章末尾，要考虑一个问题了，各个Json类型分别用什么来实现呢？在实例化模板的时候，**T**分别都是什么呢？NUMBER用double，STRING用string，BOOOL用bool，ARRAY其实我们很容易想到可以使用vector<Json>来实现，OBJECT的话是map<string, Json>，那么NULL呢？起码我暂时想不到对应的，那么我就自己造一个，然后各个派生类的代码基础就出来了。同时我们定义一个异常类，用于抛出我们这个库的异常信息。
 
 ~~~c++
     class ghJsonException : public std::runtime_error 
@@ -12,6 +12,10 @@
             size_t getPosition() const { return pos; }
         private:
             size_t pos;
+    };
+
+    class NullClass
+    {
     };
 
     class JsonNull : public Value<JsonType::NUL, NullClass>
